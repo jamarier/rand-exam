@@ -1,0 +1,28 @@
+---
+comment: 1st Part. 2023-03
+difficulty: 2
+file_descriptions: exam.md
+file_notes: exam.m
+macros:
+  - HEADER: |+
+    ## Task VARNUM
+  - HEADER_NOTES: "\n% Task VARNUM\n"
+  - RESULT_NOTES: "disp('Result for task VARNUM:')"
+  - VERIFY_VARIABLE(@a): |+
+      RESULT_NOTES
+      diff = COMPARE_ARRAYS(@a,VARQ(@a))
+  - COMPARE_ARRAYS(@a,@b): sum(abs(@a-@b))(:))
+description: |+
+  # EXAM 1
+  Name: 
+
+  Create a script with the values of the solutions, following the instructions
+  of each task.
+
+notes: |+ 
+  % EXAM 1 
+parts:
+  - addition header
+  - {tag: 'addition', num_questions: 1}
+  - product header
+  - {tag: 'product', num_questions: 1} 
