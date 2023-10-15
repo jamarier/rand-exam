@@ -21,25 +21,25 @@ using string substitution)
 
 ## Options
 
-Usage: gen-exlab.py [OPTIONS] INDEX_FILE BANK_DIR
+Usage: gen-exlab.py [OPTIONS] INDEX\_FILE BANK\_DIR
 
 Arguments:
 
-*  INDEX_FILE  Structure of exam  [required]
-*  BANK_DIR    Questions to choose  [required]
+*  INDEX\_FILE  Structure of exam  [required]
+*  BANK\_DIR    Questions to choose  [required]
 
 Options:
 
 * -e, --edition INTEGER  Force edition. If None, look for first empty
 
     It is possible to generate different versions of the exam (with same
-    INDEX_FILE (different questions but same difficulty and categories)
+    INDEX\_FILE (different questions but same difficulty and categories)
 
 * -s, --seed INTEGER     Seed used
 
     To force the rebuild an exam with same questions and values. BE CAREFUL, 
     the same random generator is used to select questions and random values, if
-    the BANK_DIR is altered (i.e. adding a random var in a question). 
+    the BANK\_DIR is altered (i.e. adding a random var in a question). 
     Can alter the questions (CHECK)
 
 * -a, --tries INTEGER    Number of tries to generate exam  [default: 1000]
@@ -58,7 +58,7 @@ Options:
 
 * --help                 Show this message and exit.
 
-## INDEX_FILE
+## INDEX\_FILE
 
 Description of the exam in a yaml file. 
 
@@ -75,26 +75,29 @@ description: <text>
 notes: <text>
 parts:
     - ...
+seed: <number>
 ```
 
 Description of attributes:
 
 * **comment** comment to describe the exam. (Year, subject, ....)
 * **difficulty** desired difficulty of the exam
-* **file_descriptions** File to generate with the questions
-* **file_notes** File to generate answers or corrector
+* **file\_descriptions** File to generate with the questions
+* **file\_notes** File to generate answers or corrector
 * **macros** List of user defined macros. Described in Macros sections. String
   to search and substitution.
-* **description** Preamble to put at the beggining of file_description
-* **notes** Preamble to put at the begginning of file_notes
+* **description** Preamble to put at the beggining of file\_description. Macros
+  are substituted.
+* **notes** Preamble to put at the begginning of file\_notes. Macros are
+  substituted.
 * **parts** The exam is a list of blocks and each block is defined with a tags
   or question type. In parts array, there is a list of these blocks with
   information about the tag to be used and the amount of questions to use in
   that block.
 
-  The general form is {tag:<string>,num_questions:<int>}, if a item is only a
-  string, that will be the tag and num_questions is defaulted to 1. This format is useful to 
-  create headers and fixes texts:
+  The general form is {tag:<string>,num\_questions:<int>}, if a item is only a
+  string, that will be the tag and num\_questions is defaulted to 1. This format
+  is useful to create headers and fixes texts:
 
   ```yaml
   parts:
@@ -114,20 +117,25 @@ Description of attributes:
 
   If `num_questions`<0, that means all questions with that tag.
 
-  The combination of {tag: 'all', num_questions: -1} dumps all questions in
-  BANK_DIR (except ignored and with no regex, described in BANK_DIR) 
+  The combination of {tag: 'all', num\_questions: -1} dumps all questions in
+  BANK\_DIR (except ignored and with no regex, described in BANK\_DIR) 
+* **seed** Seed to generate the tests. 
+  * Seed used is (this parameter + edition number)
+  * Default value of seed is today date in iso format yyyymmdd
+  * If command line cli argument seed is provided, the seed is overrided.
 
 ### MACROS
 
-Macros is a string substitution with almost no syntax in a similar way to M4
-macro languaje (simpler). Each macro has a trigger (an string), optional
+Macros is a string substitution with almost no syntax in a similar way to m4
+macro languaje (simpler than m4). Each macro has a trigger (an string), optional
 arguments and a content. The only real requirement is do not use '(' in the
 trigger string or ',' in the list of arguments. You can use any other caracter
 (space too) but for your sanity, follow this recomendations:
 
 * For triggers use only UPPERCASE and '\_'.
 * The arguments is a list of strings between parentheses with comma (',') as
-  separation. Prepend with a sigil like '$' or '@' and do not use space.
+  separation. Prepend each argument with a sigil like '$' or '@' and do not use
+  space.
 * In the content, when the macro is called, each argument is substituted by its
   value in the call.
 
@@ -141,7 +149,7 @@ transformation requires to restart the macro engine.
 #### Definitions 
 Described by order of precedence. All macros can call another macros. 
 
-##### Constant macros in INDEX_FILE
+##### Constant macros in INDEX\_FILE
 
 Examples:
 ```yaml
@@ -151,7 +159,7 @@ Examples:
       HEADER_NOTES
 ```
 
-##### Macros with arguments in INDEX_FILE
+##### Macros with arguments in INDEX\_FILE
 
 ```yaml
   - HEADER(@a,@b): "print('***** @a ----- @b')"
@@ -170,7 +178,7 @@ Sustituyed by metadata variable.
 
 Ex: `VARM(file_notes)` 
 
-it is changed by file_notes metadata.
+it is changed by file\_notes metadata.
 
 ##### VARFLOAT - Define variable with Random Float
 
@@ -231,7 +239,7 @@ Create a unique name based on the current question and a name.
 `VARQ(name)`
 
 The name create is `t<num exercise>_<name>`. if the output format doesn't allow
-that name, you can create a macro with arguments in INDEX_FILE. It has more
+that name, you can create a macro with arguments in INDEX\_FILE. It has more
 precedence than this predefined function so the macro will call yours.
 
 ##### VARNUM - Current exercise
@@ -240,7 +248,7 @@ The number of current exercise.
 
 `VARNUM`
 
-## BANK_DIR
+## BANK\_DIR
 
 A directory with yaml files. In each file can be several yaml documents. Each
 document is a question.
@@ -278,9 +286,45 @@ regex: <auto or bool>
   When macro engine is disconected, the var `VARNUM` is not incremented. This
   allow to create labels, without loose the number of the question.
 
+## FAQ - other questions
+
+### Markdown 
+The files of descriptions and notes can be in any text format. 
+A typical system is use markdown and later convert to pdf with `pandoc`.
+
+Here are some problems who required some intervention.
+
+#### Margins
+
+Default margins in pandoc are too wide. You can add a header inside description
+and notes preambles (in INDEX\_FILE) to specify the margin. 
+
+```yaml
+description: |+
+  ---
+  geometry: margin=4cm
+  output: pdf_document
+  ---
+  (And rest of preamble)
+
+```
+The header can contain metadata about different aspects of the pdf generation,
+like the margins, or language, or templates, ...
+
+#### New Page
+
+I am not sure about the mecanism of pandoc and markdown. But it seems it is
+intelligent enought to understand if a '\' is escaping a character or not. 
+
+The pandoc process to convert markdown to pdf have a intermediate representation 
+in LaTeX. So any LaTeX command in the markdown is copied verbatim to the LaTeX
+representation without requirement of escape the '\' char.
+
+So, to force a new page, use LaTeX command `\newpage` directly.
+
 ## Example
 
-### INDEX_FILE
+### INDEX\_FILE
 ```yaml
 ---
 comment: 1st Part. 2023-03
@@ -312,7 +356,7 @@ parts:
   - {tag: 'product', num_questions: 1} 
 ``` 
 
-### BANK_DIR
+### BANK\_DIR
 ```
 ---
 tags:
@@ -371,6 +415,4 @@ notes: |+
   Sometimes is interesting generate the same questions (with
   different values) several times to make drillout exercises (to
   practice).
-* Be able to use macros in description and notes (in INDEX_FILE)
-  without increment VARNUM
 
