@@ -262,6 +262,7 @@ def check_exam(exam: Mapping, questions: Mapping) -> bool:
         if part["tag"] not in questions:
             print("Checking exam:")
             print(f"  Part: {part} has invalid tag")
+            print(f"  Defined tags: {questions.keys()}")
             return False
 
     return True
@@ -445,7 +446,15 @@ def op_VAROP(text: str, vars) -> Tuple[str, Mapping]:
 
 def op_VARM(text: str, vars: Mapping) -> Tuple[str, Mapping]:
     pattern = re.compile(r"VARM\(([^()]+)\)")
+    print("metadata:")
+    print(vars)
     text = pattern.sub(lambda m: f'{vars["metadata"][m.group(1)]}', text)
+
+    return (text, vars)
+
+
+def op_VARDATE(text: str, vars: Mapping) -> Tuple[str, Mapping]:
+    text = re.sub(r"VARDATE", time.strftime("%Y-%m-%d"), text)
 
     return (text, vars)
 
@@ -459,6 +468,21 @@ def op_VARV(text: str, vars: Mapping) -> Tuple[str, Mapping]:
 
 def op_VARQ(text: str, vars: Mapping) -> Tuple[str, Mapping]:
     text = re.sub(r"VARQ\(([^()]+)\)", r"tVARNUM_\1", text)
+
+    return (text, vars)
+
+
+def op_VARFOR(text: str, vars: Mapping) -> Tuple[str, Mapping]:
+    pattern = re.compile(r"VARFOR\(([^()]+)\)")
+    match = pattern.search(text)
+    if match:
+        args = [it for it in match.group(1).split(",")]
+        torepeat = args.pop(0)
+        times = int(args.pop(0))
+        if times <= 0:
+            return (text, vars)
+
+        text = re.sub(pattern, torepeat * times, text)
 
     return (text, vars)
 
@@ -567,6 +591,10 @@ def macro_engine(counter, macros, vars, text_d, text_n) -> Tuple[str, str]:
         if run:
             continue
 
+        run, text_d, text_n, vars = macro_step2(text_d, text_n, vars, op_VARDATE)
+        if run:
+            continue
+
         # macros with variable definitions
         run, text_d, text_n, vars = macro_step2(text_d, text_n, vars, op_VARFLOAT)
         if run:
@@ -594,6 +622,9 @@ def macro_engine(counter, macros, vars, text_d, text_n) -> Tuple[str, str]:
         run, text_d, text_n, vars = macro_step2(
             text_d, text_n, vars, lambda t, v: apply_varnum(counter, t, v)
         )
+        if run:
+            continue
+        run, text_d, text_n, vars = macro_step2(text_d, text_n, vars, op_VARFOR)
         if run:
             continue
 

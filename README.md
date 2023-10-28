@@ -180,6 +180,10 @@ Ex: `VARM(file_notes)`
 
 it is changed by file\_notes metadata.
 
+##### VARDATE - Metadata
+
+Sustituyed by current date in ISO8601 format ("2023-10-27")
+
 ##### VARFLOAT - Define variable with Random Float
 
 Select a random float number between `min` and `max` and keep `decimals` decimals
@@ -247,6 +251,14 @@ precedence than this predefined function so the macro will call yours.
 The number of current exercise.
 
 `VARNUM`
+
+##### VARFOR - Repeat string
+
+Repeat a text for certain times
+
+`VARFOR(text,times)`
+
+Ex: `VARFOR(*+,3)` convert into `*+*+*+`
 
 ## BANK\_DIR
 
