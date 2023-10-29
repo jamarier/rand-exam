@@ -111,6 +111,18 @@ def gen_int(min, max) -> str:
     return output
 
 
+def range(min, max, step) -> List:
+    """min <= generated << max
+    step"""
+    options = []
+    current = min
+    while current <= max:
+        options.append(current)
+        current += step
+
+    return options
+
+
 # --------------------------------------------------------------------
 # Internal operators
 
@@ -158,26 +170,44 @@ def op_VAR(args, vars) -> Tuple[str, Mapping]:
 
 @register_op("INT")
 def op_INT(args, vars) -> Tuple[str, Mapping]:
+    """
+    The third arg is the step or 1 if doesn't exist
+    """
     args = to_int(args)
-    return str(gen_int(*args)), vars
-
-
-@register_op("VARINT")
-def op_VARINT(args, vars) -> Tuple[str, Mapping]:
-    varname = args.pop(0)
-    return run_function("VAR", varname, "INT", *args, vars=vars)
+    if len(args) == 2:
+        return str(gen_int(*args)), vars
+    else:
+        return str(gen_op(range(*args))), vars
 
 
 @register_op("FLOAT")
 def op_FLOAT(args, vars) -> Tuple[str, Mapping]:
     args = to_float(args)
+
     return str(gen_float(*args)), vars
 
 
-@register_op("VARFLOAT")
-def op_VARFLOAT(args, vars) -> Tuple[str, Mapping]:
-    varname = args.pop(0)
-    return run_function("VAR", varname, "FLOAT", *args, vars=vars)
+@register_op("FLOATRANGE")
+def op_FLOATRANGE(args, vars) -> Tuple[str, Mapping]:
+    """
+    FLOATRANGE(min,max,step,decimals?)
+    """
+    args = to_float(args)
+
+    # count decimals on step var
+    if len(args) == 3:
+        last = args[-1]
+        decimals = len(str(last - int(last))) - 2
+    if len(args) == 4:
+        decimals = args.pop()
+
+    return f"{gen_op(range(*args)):.{int(decimals)}f}", vars
+
+
+@register_op("OP")
+def op_OP(args, vars) -> Tuple[str, Mapping]:
+    text = gen_op(args)
+    return (text, vars)
 
 
 # quotes
@@ -347,6 +377,6 @@ def macro_engine2(counter, macros, vars, text_d, text_n) -> Tuple[str, str]:
         print(output1)
         print("---")
         print(output2)
-        0 / 0
+        # 0 / 0
 
     return (output1, output2)

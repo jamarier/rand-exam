@@ -73,8 +73,8 @@ def inner_load_questions(input: Path, accumulated: Mapping) -> Mapping:
 
                 # Numbering
                 if question["regex"] == "auto":
-                    if "VAR" in question["description"] or (
-                        question["notes"] is not None and "VAR" in question["notes"]
+                    if "((" in question["description"] or (
+                        question["notes"] is not None and "((" in question["notes"]
                     ):
                         question["regex"] = True
                     else:
