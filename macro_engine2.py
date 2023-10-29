@@ -1,10 +1,15 @@
-from typing import Tuple, Mapping
+from typing import Tuple, Mapping, List
 import time
 import random
 import re
 
 
-def locate_macro(text) -> Tuple[str, str, str]:
+def locate_macro(text: str) -> Tuple[str, str, str]:
+    """
+    Locate first invocation of macro can be resolve (there is not nested macro)
+    return the text in 3 parts: previous, macro invocation, rest
+
+    """
     start_pattern = re.compile(r"\(\(", re.DOTALL)
     end_pattern = re.compile(r"\)\)", re.DOTALL)
 
@@ -32,6 +37,17 @@ def locate_macro(text) -> Tuple[str, str, str]:
     return (previous, macro, post)
 
 
+def remove_to_nl(text: str) -> str:
+    """
+    Remove all text until end or newline
+    """
+    pos = text.find("\n")
+    if pos < 0:
+        return ""
+    else:
+        return text[pos + 1 :]
+
+
 def apply_macro_user(macro, args) -> str:
     """
     Take a macro user defined and calculate the output2
@@ -50,6 +66,24 @@ def apply_macro_user(macro, args) -> str:
         target = target.replace(macro["args"][it], arg)
 
     return target
+
+
+# --------------------------------------------------------------------
+# arg formatters
+
+
+def to_int(args: List[str]) -> List[int]:
+    """
+    Convert all arguments into ints
+    """
+    return [int(it) for it in args]
+
+
+def to_float(args: List[str]) -> List[float]:
+    """
+    Convert all arguments into floats
+    """
+    return [float(it) for it in args]
 
 
 # --------------------------------------------------------------------
@@ -97,19 +131,34 @@ def register_op(name):
     return inner_decorator
 
 
-@register_op("VAR")
-def op_VAR(args, vars) -> Tuple[str, Mapping]:
+# variable generation
+
+
+@register_op("SAVE")
+def op_SAVE(args, vars) -> Tuple[str, Mapping]:
     varname = args.pop(0)
     key = args.pop(0)
     value, vars = run_function(key, *args, vars=vars)
     vars[varname] = value
 
-    return (value, vars)
+    return ("", vars)
+
+
+@register_op("VAR")
+def op_VAR(args, vars) -> Tuple[str, Mapping]:
+    varname = args.pop(0)
+    key = args.pop(0)
+    _, vars = run_function("SAVE", varname, key, *args, vars=vars)
+
+    return (f"(({varname}))", vars)
+
+
+# random generators
 
 
 @register_op("INT")
 def op_INT(args, vars) -> Tuple[str, Mapping]:
-    args = [int(it) for it in args]
+    args = to_int(args)
     return str(gen_int(*args)), vars
 
 
@@ -121,7 +170,7 @@ def op_VARINT(args, vars) -> Tuple[str, Mapping]:
 
 @register_op("FLOAT")
 def op_FLOAT(args, vars) -> Tuple[str, Mapping]:
-    args = [float(it) for it in args]
+    args = to_float(args)
     return str(gen_float(*args)), vars
 
 
@@ -131,10 +180,55 @@ def op_VARFLOAT(args, vars) -> Tuple[str, Mapping]:
     return run_function("VAR", varname, "FLOAT", *args, vars=vars)
 
 
+# quotes
+
+
 @register_op("QUOTE")
 def op_QUOTE(args, vars) -> Tuple[str, Mapping]:
     varname = args.pop(0)
     return f"t((COUNTER))_{varname}", vars
+
+
+# mathematical operations
+
+
+@register_op("CALC")
+def op_CALC(args, vars) -> Tuple[str, Mapping]:
+    stack = []
+
+    while args:
+        key = args.pop(0)
+
+        if key in vars["metadata"]:
+            stack.append(float(vars["metadata"][key]))
+        elif key in vars:
+            stack.append(float(vars[key]))
+        elif key == "INT":
+            value = stack.pop()
+            stack.append(int(value))
+        elif key == "+":
+            value_b = stack.pop()
+            value_a = stack.pop()
+            stack.append(value_a + value_b)
+        elif key == "-":
+            value_b = stack.pop()
+            value_a = stack.pop()
+            stack.append(value_a - value_b)
+        elif key == "*":
+            value_b = stack.pop()
+            value_a = stack.pop()
+            stack.append(value_a * value_b)
+        elif key == "/":
+            value_b = stack.pop()
+            value_a = stack.pop()
+            stack.append(value_a / value_b)
+        else:
+            stack.append(float(key))
+
+    if len(stack) > 1:
+        raise ValueError(f"To much depth in stack: <{stack}>")
+
+    return str(stack[0]), vars
 
 
 print("Internal Operations:")
@@ -195,6 +289,12 @@ def macro_engine2_single(macros, vars, text) -> str:
 
     args = macro.split(",")
     key = args.pop(0)
+
+    # DNL, remove from macro invocation to newline inclusive
+    if key == "DNL":
+        post = remove_to_nl(post)
+        text = previous + post
+        return macro_engine2_single(macros, vars, text)
 
     # execute function in key
     result, vars = run_function(key, *args, vars=vars, macros=macros)
