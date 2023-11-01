@@ -53,7 +53,7 @@ def inner_load_questions(input: Path, accumulated: Mapping) -> Mapping:
                     raise typer.Exit(3)
 
                 if question["description"] is None:
-                    question["description"] = "VARNUM: No description - DEBUG\n"
+                    question["description"] = "((COUNTER)): No description - DEBUG\n"
 
                 if "ignored" in question:
                     print(" question ignored")
@@ -249,8 +249,8 @@ def load_exam(exam_file: Path) -> Mapping:
         exam["seed"] = int(time.strftime("%Y%m%d"))
 
     # description and notes (apply macros)
-    exam["description"], exam["notes"] = macro_engine(
-        0, exam["macros"], {}, exam["description"], exam["notes"]
+    exam["description"], exam["notes"] = macro_engine2(
+            0, exam["macros"], {"metadata":{}}, exam["description"], exam["notes"]
     )
 
     return exam

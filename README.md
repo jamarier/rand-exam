@@ -142,12 +142,7 @@ trigger string or ',' in the list of arguments. You can use any other caracter
 All the inputs values and the results are strings and they are converted if it
 is needed.
 
-Each macro has an order of preference. Until no macro of superior order is
-processed, do no start the substitutions of macros of the next level. So, each
-transformation requires to restart the macro engine.
-
-#### Definitions 
-Described by order of precedence. All macros can call another macros. 
+Macro are the same for all questions. 
 
 ##### Constant macros in INDEX\_FILE
 
@@ -172,93 +167,190 @@ You can use any string to define argument and they are always substituted
 In `HEADER2` the second arg changed the sigil to be able to write @b without
 substitution.
 
-##### VARM - Metadata
+## Macro engine 2
 
-Sustituyed by metadata variable.
+Second version of the macro engine. In the same namespace, there are four kind of 
+substitutions.
 
-Ex: `VARM(file_notes)` 
+* Metadata. Specific information of the question: Level of difficulty,
+  frequency, title, ...Metadata is accesible in descriptions and notes of the
+  question.
 
-it is changed by file\_notes metadata.
+* Vars. Specific from question. Any variable defined with "SAVE" or "VAR"
+  commands. Vars are accesible since the creation until the end of the question
+  (descriptions and notes).
 
-##### VARDATE - Metadata
+* Macros. Defined in INDEX\_FILE. Common values and function for all exam.
 
-Sustituyed by current date in ISO8601 format ("2023-10-27")
+* Internal Operations. Defined in code.
 
-##### VARFLOAT - Define variable with Random Float
+The look-up order is the same of above list: Metadata, Vars, Macros and
+Internal. That allows to override internal operations with specific operations.
 
-Select a random float number between `min` and `max` and keep `decimals` decimals
-(default 2). 
+### Invocation
 
-`VARFLOAT(name,min,max,decimals=2)`
+The macro engine is activated with sequence of double parenteses. Inside of the
+parentheses there is a list of elements marked with commas. The first token is
+the variable, macro or function to execute and the rest of the elements are the
+arguments of that function.
 
-The macro result is inserted instead the macro call and the result is stored in
-variable `name` to possible later reuse.
+All arguments are strings, but certains functions can convert to a number if it
+is needed. Extra arguments are ignored. 
 
-##### VARFLOATRANGE - Define variable from list of floats
+A macro defined as: 
+  `- HEADER(@a,@b): "print('***** @a ----- @b')"`
+is invoqued: ((HEADER,one,two))
 
-Create a list of floats from `start`, `end` and `step`. And choose one.
+To get the value of a variable put the name in double parentheses: ((myvariable))
 
-`VARFLOATRANGE(name,start,end,step,decimals=2)`
+### Order of macro execution.
 
-The macro result is inserted instead the macro call and the result is stored in
-variable `name` to possible later reuse.
+The order is from begining to end. From inside to outside.
 
+In expression:
+```
+((1,((2)),3,((4))))((5))((6,((7))))
+```
+The order of execution of substitutions is 2,4,1,5,7,6
 
-##### VARINT - Define variable with random int
-Select a random int in range `min <= generated <= max`.
+### Internal Functions 
 
-`VARINT(name,min,max)`
+#### Variable Generation
+##### SAVE
 
-##### VARINTRANGE - Define variable from list of ints
+Asign to "varname", the result of the function and args. 
 
-Create a list of ints from `start`, `end` and `step`. And choose one.
+```
+((SAVE,varname,function,args))
+```
+save doesn't produce any output.
 
-`VARINTRANGE(name,start,end,step)`
+##### VAR
 
-The macro result is inserted instead the macro call and the result is stored in
-variable `name` to possible later reuse.
+Asign to "varname", the result of the function and args. 
 
-##### VAROP - Define a value from list of values
-Take a list of values and choose one. 
+```
+((VAR,varname,function,args))
+```
+The output is the value of the created variable.
 
-`VAROP(name,opc1,opc2,opc3)`
+#### Random generators
+##### INT
 
-Example: `Define operator VAROP(operador,+,addition,in this expresion: 1+2).`
+Random Int with $min<=value<=max$. If step is specified, the values have to
+fullfill: $value = min+k\cdot{}step$.
 
-The macro result is inserted instead the macro call and the result is stored in
-variable `name` to possible later reuse.
+```
+((INT,min,max))
+```
+or
+```
+((INT,min,max,step))
+```
 
-##### VARV - Use previous value
+##### FLOAT 
 
-Put the content of a previously defined variable.
+Random FLOAT with $min<=value<=max$. The output is shown with the number of
+decimals.
 
-`VARV(name)`
+```
+((FLOAT,min,max))
+```
+or
+```
+((FLOAT,min,max,decimals))
+```
 
-A variable is not a macro. So it is only substituted by its value if the name of the variable is inside `VARV` macro.
+##### FLOATRANGE 
 
-##### VARQ - Create unique name
+Random FLOAT with $min<=value<=max$. Limited by steps. The output is shown with the number of
+decimals (same decimals than step or defined).
 
-Create a unique name based on the current question and a name. 
+$value = min+k\cdot{}step$.
 
-`VARQ(name)`
+```
+((FLOATRANGE,min,max,step))
+```
+or
+```
+((FLOATRANGE,min,max,step,decimals))
+```
+##### OP
+Random option. Take one random arg.
 
-The name create is `t<num exercise>_<name>`. if the output format doesn't allow
-that name, you can create a macro with arguments in INDEX\_FILE. It has more
-precedence than this predefined function so the macro will call yours.
+```
+((OP,one,two,three))
+```
 
-##### VARNUM - Current exercise
+#### Calculations
+Function to calculate. 
 
-The number of current exercise.
+##### Calc
 
-`VARNUM`
+Function CALC is a little RPN calculator with basic functions: +,-,*,/.
 
-##### VARFOR - Repeat string
+```
+((CALC,a,((FLOAT,1,3)),+,2,/,INT))
+```
+Remarks:
 
-Repeat a text for certain times
+* All operations are done with FLOAT. The INT command convert value in top of
+  stack into int.
 
-`VARFOR(text,times)`
+* Any variable is substitute by its value. The value have to be valid number or
+  operations.
 
-Ex: `VARFOR(*+,3)` convert into `*+*+*+`
+* You can use functions. The output of the functions have to be valid numbers
+  or operations.
+
+* You can use numbers (ints or float) directly. All are converted to float. 
+
+#### Format functions
+
+##### DATE
+Current date en ISO8601 format (i.e. "2023-10-23")
+
+```
+((DATE))
+```
+
+##### DNL
+
+Ignore the rest of the line until "\n". Same idea from dnl macro of m4. It
+allows to reduce lines in the output.
+
+```
+((DNL))
+```
+E.g.:
+```
+Text and more text
+((SAVE,a,INT,1,10))((DNL))
+more text. The above line is omited. 
+```
+
+##### FOR
+Repeat a string several times:
+
+```
+((FOR,*,((difficulty))))
+```
+
+Take the value of difficulty and repeat (a difficulty of 3 will generate '***')
+
+##### ID
+Return the first argument of the function.
+
+```
+((ID,12))
+```
+
+Allow to use a literal when a function is required. 
+
+E.g.:
+```
+((SAVE,a,ID,12))
+```
 
 ## BANK\_DIR
 

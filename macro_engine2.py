@@ -147,7 +147,7 @@ def register_op(name):
 
 
 @register_op("SAVE")
-def op_SAVE(args, vars) -> Tuple[str, Mapping]:
+def op_SAVE(args, vars: Mapping) -> Tuple[str, Mapping]:
     varname = args.pop(0)
     key = args.pop(0)
     value, vars = run_function(key, *args, vars=vars)
@@ -157,7 +157,7 @@ def op_SAVE(args, vars) -> Tuple[str, Mapping]:
 
 
 @register_op("VAR")
-def op_VAR(args, vars) -> Tuple[str, Mapping]:
+def op_VAR(args, vars: Mapping) -> Tuple[str, Mapping]:
     varname = args.pop(0)
     key = args.pop(0)
     _, vars = run_function("SAVE", varname, key, *args, vars=vars)
@@ -169,7 +169,7 @@ def op_VAR(args, vars) -> Tuple[str, Mapping]:
 
 
 @register_op("INT")
-def op_INT(args, vars) -> Tuple[str, Mapping]:
+def op_INT(args, vars: Mapping) -> Tuple[str, Mapping]:
     """
     The third arg is the step or 1 if doesn't exist
     """
@@ -181,14 +181,17 @@ def op_INT(args, vars) -> Tuple[str, Mapping]:
 
 
 @register_op("FLOAT")
-def op_FLOAT(args, vars) -> Tuple[str, Mapping]:
+def op_FLOAT(args, vars: Mapping) -> Tuple[str, Mapping]:
+    """
+    FLOAT(min,max,decimals?)
+    """
     args = to_float(args)
 
     return str(gen_float(*args)), vars
 
 
 @register_op("FLOATRANGE")
-def op_FLOATRANGE(args, vars) -> Tuple[str, Mapping]:
+def op_FLOATRANGE(args, vars: Mapping) -> Tuple[str, Mapping]:
     """
     FLOATRANGE(min,max,step,decimals?)
     """
@@ -205,18 +208,28 @@ def op_FLOATRANGE(args, vars) -> Tuple[str, Mapping]:
 
 
 @register_op("OP")
-def op_OP(args, vars) -> Tuple[str, Mapping]:
-    text = gen_op(args)
-    return (text, vars)
+def op_OP(args, vars: Mapping) -> Tuple[str, Mapping]:
+    return gen_op(args), vars
 
 
-# quotes
+# format content
 
 
-@register_op("QUOTE")
-def op_QUOTE(args, vars) -> Tuple[str, Mapping]:
-    varname = args.pop(0)
-    return f"t((COUNTER))_{varname}", vars
+@register_op("DATE")
+def op_DATE(args, vars: Mapping) -> Tuple[str, Mapping]:
+    return time.strftime("%Y-%m-%d"), vars
+
+
+@register_op("FOR")
+def op_FOR(args, vars: Mapping) -> Tuple[str, Mapping]:
+    torepeat = args.pop(0)
+    times = int(args.pop(0))
+
+    return torepeat * times, vars
+
+@register_op("ID")
+def op_ID(args, vars: Mapping) -> Tuple[str, Mapping]:
+    return args.pop(0), vars
 
 
 # mathematical operations
