@@ -227,6 +227,7 @@ def op_FOR(args, vars: Mapping) -> Tuple[str, Mapping]:
 
     return torepeat * times, vars
 
+
 @register_op("ID")
 def op_ID(args, vars: Mapping) -> Tuple[str, Mapping]:
     return args.pop(0), vars
@@ -345,9 +346,7 @@ def macro_engine2_single(macros, vars, text) -> str:
         text = previous + result + post
         return macro_engine2_single(macros, vars, text)
 
-    print("~~~~~~~~Unknown function", key, args)
-    10 / 0
-    return text
+    raise ValueError("~~~~~~~~Unknown function", key, args)
 
 
 def macro_engine2(counter, macros, vars, text_d, text_n) -> Tuple[str, str]:
