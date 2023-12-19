@@ -1,7 +1,7 @@
 #!/usr/bin/env env/bin/python
 
 import typer
-from typing import Mapping, List, Optional
+from typing import Dict, List, Optional
 from typing_extensions import Annotated
 import time
 
@@ -38,8 +38,13 @@ def label(text):
 
 # --------------------------------------------------------------------
 # QUESTIONS
-def inner_load_questions(input: Path, accumulated: Mapping) -> Mapping:
-    """Load the questions in a directory or file."""
+def inner_load_questions(input: Path, accumulated: Dict) -> Dict:
+    """Load the questions in a directory or file.
+
+    Returns a Dict.
+        the keys are the tags of the questions
+        the values are a list of the questions
+    """
     print(f"loading {input}")
     if input.is_dir():
         for subinput in input.glob("*"):
@@ -60,7 +65,7 @@ def inner_load_questions(input: Path, accumulated: Mapping) -> Mapping:
                     continue
 
                 # compulsory keys
-                for key in ["tags", "description", "difficulty"]:
+                for key in ["description", "difficulty"]:
                     if key not in question or question[key] is None:
                         print(f' question "{question}" has no key: "{key}"')
                         raise typer.Exit(3)
@@ -81,18 +86,26 @@ def inner_load_questions(input: Path, accumulated: Mapping) -> Mapping:
                         question["regex"] = False
 
                 # tags archiving
-                for tag in question["tags"]:
+                tags = set()
+                tags.add(input.stem)
+                if question["regex"]:
+                    tags.add("all")
+                if "tags" in question:
+                    if isinstance(question["tags"], str):
+                        tags.add(question["tags"])
+                    if isinstance(question["tags"], list):
+                        for tag in question["tags"]:
+                            tags.add(tag)
+
+                for tag in tags:
                     if tag not in accumulated:
                         accumulated[tag] = []
                     accumulated[tag].append(question)
 
-                if question["regex"]:
-                    accumulated["all"].append(question)
-
     return accumulated
 
 
-def load_questions(bank_dir: Path) -> Mapping:
+def load_questions(bank_dir: Path) -> Dict:
     """Load questions from a bank_dir.
     wrapper of inner_load_questions.
     """
@@ -183,7 +196,7 @@ def difficulty_list(questions) -> float:
 # EXAM
 
 
-def load_exam(exam_file: Path) -> Mapping:
+def load_exam(exam_file: Path) -> Dict:
     header("Loading exam")
 
     with exam_file.open("r") as fh:
@@ -250,13 +263,13 @@ def load_exam(exam_file: Path) -> Mapping:
 
     # description and notes (apply macros)
     exam["description"], exam["notes"] = macro_engine2(
-            0, exam["macros"], {"metadata":{}}, exam["description"], exam["notes"]
+        0, exam["macros"], {"metadata": {}}, exam["description"], exam["notes"]
     )
 
     return exam
 
 
-def check_exam(exam: Mapping, questions: Mapping) -> bool:
+def check_exam(exam: Dict, questions: Dict) -> bool:
     """Check integrity of exam (all tags are deffined in bank of questions)
     and other possibles checks
     """
@@ -407,11 +420,59 @@ def render_exam(exam, filenames, exam_instance):
 
 
 # --------------------------------------------------------------------
+# creación de una plantilla de index_file si esta no existe
+
+
+def create_index_file(index_file: Path):
+    output = """
+---
+comment: Catalogue of questions
+difficulty: 0
+file_descriptions: catalogue.md
+file_notes: catalogue.m
+macros:
+  - HEADER: |+
+      ((COUNTER)) Dif. ((FOR,*,((difficulty)))) Frec. ((frequency))
+  - HEADER_NOTES: "((COUNTER))\n"
+description: |+
+  ---
+  geometry: margin=4cm
+  output: pdf_document
+  ---
+  ((comment))
+notes: |+
+  ((comment))
+parts:
+  - instrucciones
+  - Parte Señal
+  - Sesión 1
+  - {tag: 'sesion1',num_questions: -1}
+  - Sesión 2
+  - {tag: 'sesion2',num_questions: -1}
+  - Sesión 3
+"""
+
+    if index_file.exists():
+        raise ValueError(f"File <{index_file}> exists, cannot write over it.")
+    else:
+        with index_file.open("w") as fh:
+            fh.write(output)
+
+
+# --------------------------------------------------------------------
 
 
 def main(
-    index_file: Annotated[Path, typer.Argument(help="Structure of exam")],
-    bank_dir: Annotated[Path, typer.Argument(help="Questions to choose")],
+    index_file: Annotated[
+        Path,
+        typer.Argument(
+            help="Structure of exam. "
+            "if the file doesn't exist, I'll create one with a template for you."
+        ),
+    ],
+    bank_dir: Annotated[
+        Optional[Path], typer.Option("--bank", "-b", help="Questions to choose from")
+    ] = None,
     edition: Annotated[
         Optional[int],
         typer.Option(
@@ -429,20 +490,34 @@ def main(
     ] = 0.5,
 ):
     print("index_file", index_file)
-    print("bank_dir", bank_dir)
-
-    questions = load_questions(bank_dir)
+    if not index_file.exists():
+        create_index_file(index_file)
+        return
 
     exam = load_exam(index_file)
+
+    # bank_dir loading/checking
+    if bank_dir is None:
+        if "bank" in exam:
+            bank_dir = Path(exam["bank"])
+        else:
+            raise ValueError("No bank dir in index_file or CLI options")
+
+    # reading seed
+    if seed is None:
+        if "seed" in exam:
+            seed = exam["seed"]
+        else:
+            print("No seed in index_file or CLI options. Using default seed")
+    else:
+        random.seed(seed)
+
+    # reading questions
+    questions = load_questions(bank_dir)
+
     if not check_exam(exam, questions):
         print("Dying")
         raise typer.Exit(1)
-
-    # reading seed
-    if seed:
-        random.seed(seed)
-    else:
-        random.seed(exam["seed"] + edition)
 
     # output filename construction
     if edition is None:

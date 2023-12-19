@@ -113,7 +113,8 @@ Description of attributes:
   difficulty=0. (Same for "Theory" or "Exercises"). In this format it is easy to 
   overview the structure of the exam.
 
-  There is a special predefined tag: `all` that means all questions available.
+  There is a special predefined tag: `all` that means all questions available. (In fact, 
+  `all` tag is all questions with regex activated.)
 
   If `num_questions`<0, that means all questions with that tag.
 
@@ -360,7 +361,7 @@ document is a question.
 Structure of question:
 ```yaml
 title: <string>
-tags: <string or array of strings>  #compulsory
+tags: <string or array of strings>  
 difficulty: <number>                #compulsory
 frequency: <number>
 description: <text of question>     #compulsory
@@ -371,7 +372,10 @@ regex: <auto or bool>
 
 * **title** A title only for document the question. Maybe an example of
   question or a small description. Optional
-* **tags** A string with a tags or a list of strings. It is compulsory.
+* **tags** A string with a tag or a list of strings. Two tags are automagically added to
+  each question:
+  * the filename (without the yaml extension) and,
+  * `all` (if regex is true, also include auto if is the result it true).
 * **difficulty** difficulty asigned. Compulsory. It is possible to assign
   difficulty=0. To headers and other parts.
 * **frequency** Bigger value implies more probability to be selected. Default
