@@ -6,11 +6,11 @@ import re
 
 def locate_macro(text: str) -> Tuple[str, str, str]:
     """
-    Locate first invocation of macro can be resolve (there is not nested macro)
+    Locate first invocation of macro can be resolve (when there is not nested macro)
     return the text in 3 parts: previous, macro invocation, rest
 
     """
-    start_pattern = re.compile(r"\(\(", re.DOTALL)
+    start_pattern = re.compile(r"\(\((?!\()", re.DOTALL)
     end_pattern = re.compile(r"\)\)", re.DOTALL)
 
     start1 = start_pattern.search(text)

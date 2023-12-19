@@ -383,11 +383,11 @@ regex: <auto or bool>
   question or not.
   * true: yes with macros. Real question.
   * false: without macros. Header.
-  * auto: look for any "VAR" operator in the description and notes text. If
+  * auto: look for any "((" operator in the description and notes text. If
     there is any, the macro engine is used, otherwise the macros are not used.
     Default value. 
 
-  When macro engine is disconected, the var `VARNUM` is not incremented. This
+  When macro engine is disconected, the var `COUNTER` is not incremented. This
   allow to create labels, without loose the number of the question.
 
 ## FAQ - other questions
