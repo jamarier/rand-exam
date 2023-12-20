@@ -298,13 +298,18 @@ Remarks:
 * All operations are done with FLOAT. The INT command convert value in top of
   stack into int.
 
-* Any variable is substitute by its value. The value have to be valid number or
+* Any variable is substituted by its value. The value have to be valid number  or
   operations.
 
 * You can use functions. The output of the functions have to be valid numbers
   or operations.
 
 * You can use numbers (ints or float) directly. All are converted to float. 
+
+* All arguments are striped (removed spaces before and after the content), if
+  you have a variable name with a space at the begining or the end (very bad
+  idea), you can escape using double parentheses: (( A long variable name with
+  spaces at the beggining)).
 
 #### Format functions
 

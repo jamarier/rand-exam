@@ -241,15 +241,22 @@ def op_CALC(args, vars) -> Tuple[str, Mapping]:
     stack = []
 
     while args:
-        key = args.pop(0)
+        key = args.pop(0).strip()
 
+        # Variable substitution
         if key in vars["metadata"]:
-            stack.append(float(vars["metadata"][key]))
+            key = vars["metadata"][key]
         elif key in vars:
-            stack.append(float(vars[key]))
-        elif key == "INT":
+            key = vars[key]
+
+        # Remove empty operator
+        if key == "":
+            continue
+
+        # Operators
+        if key == "INT":
             value = stack.pop()
-            stack.append(int(value))
+            stack.append(int(round(value)))  # round to even, then cast
         elif key == "+":
             value_b = stack.pop()
             value_a = stack.pop()
