@@ -24,12 +24,18 @@ from macro_engine2 import macro_engine2
 
 
 def header(text):
+    """
+    Create a banner to help to read the logs (open flag)
+    """
     print("-" * 40)
     print(f"- {text}")
     print(" ")
 
 
 def label(text):
+    """
+    Create a banner to help to read the logs (closed banner)
+    """
     length = len(text) + 4
     print("*" * length)
     print(f"* {text} *")
@@ -38,79 +44,111 @@ def label(text):
 
 # --------------------------------------------------------------------
 # QUESTIONS
-def inner_load_questions(input: Path, accumulated: Dict) -> Dict:
+
+
+def resolve_auto_regex(question) -> bool:
+    """
+    Read regex value in question and resolve true/false if the value is auto.
+    """
+    output = question.get("regex", "auto")
+
+    if output == "auto":
+        output = "((" in question["description"] or (
+            question["notes"] is not None and "((" in question["notes"]
+        )
+
+    return output
+
+
+def check_description(question) -> Dict:
+    """
+    Check the existence of description
+    """
+    if "description" not in question:
+        print(f' question "{question}" has no key: "description"')
+        raise typer.Exit(3)
+
+    if question["description"] is None:
+        question["description"] = "((COUNTER)): No description - DEBUG\n"
+
+    return question
+
+
+def check_compulsory(question, keys):
+    """
+    Check the existence of compulsory keys
+    """
+    for key in keys:
+        if key not in question or question[key] is None:
+            print(f' question "{question}" has no key: "{key}"')
+            raise typer.Exit(3)
+
+
+def load_tags(question, filestem):
+    """
+    Load tags of question and add filestem and all (if it is regex)
+    """
+
+    tags = set()
+    tags.add(filestem)
+
+    if question["regex"]:
+        tags.add("all")
+    if "tags" in question:
+        if isinstance(question["tags"], str):
+            tags.add(question["tags"])
+        if isinstance(question["tags"], list):
+            for tag in question["tags"]:
+                tags.add(tag)
+
+    return tags
+
+
+def inner_load_questions(input_path: Path, accumulated: List) -> List:
     """Load the questions in a directory or file.
 
-    Returns a Dict.
-        the keys are the tags of the questions
+    Returns a List.
         the values are a list of the questions
     """
     print(f"loading {input}")
-    if input.is_dir():
-        for subinput in input.glob("*"):
+    if input_path.is_dir():
+        for subinput in input_path.glob("*"):
             accumulated = inner_load_questions(subinput, accumulated)
-    elif input.suffix == ".yaml" or input.suffix == ".yml":
-        with input.open("r") as fh:
+    elif input_path.suffix in (".yaml", ".yml"):
+        with input_path.open("r") as fh:
             questions = yaml.safe_load_all(fh)
             for question in questions:
-                if "description" not in question:
-                    print(f' question "{question}" has no key: "description"')
-                    raise typer.Exit(3)
-
-                if question["description"] is None:
-                    question["description"] = "((COUNTER)): No description - DEBUG\n"
-
+                # allow to ignore unfinished questions
                 if "ignored" in question:
                     print(" question ignored")
                     continue
 
                 # compulsory keys
-                for key in ["description", "difficulty"]:
-                    if key not in question or question[key] is None:
-                        print(f' question "{question}" has no key: "{key}"')
-                        raise typer.Exit(3)
+                check_compulsory(question, ["description", "difficulty"])
+                question = check_description(question)
 
                 # default values
-                question["regex"] = question.get("regex", "auto")
                 question["notes"] = question.get("notes", None)
                 question["frequency"] = question.get("frequency", 1)
-                question["title"] = question.get("title", question["description"][0:80])
-
-                # Numbering
-                if question["regex"] == "auto":
-                    if "((" in question["description"] or (
-                        question["notes"] is not None and "((" in question["notes"]
-                    ):
-                        question["regex"] = True
-                    else:
-                        question["regex"] = False
+                question["title"] = question.get(
+                    "title", question["description"][0:80])
+                # regex key must to be the last because can use info of other keys and values
+                question["regex"] = resolve_auto_regex(question)
 
                 # tags archiving
-                tags = set()
-                tags.add(input.stem)
-                if question["regex"]:
-                    tags.add("all")
-                if "tags" in question:
-                    if isinstance(question["tags"], str):
-                        tags.add(question["tags"])
-                    if isinstance(question["tags"], list):
-                        for tag in question["tags"]:
-                            tags.add(tag)
+                question["tags"] = load_tags(question, input_path.stem)
 
-                for tag in tags:
-                    if tag not in accumulated:
-                        accumulated[tag] = []
-                    accumulated[tag].append(question)
+                accumulated.append(question)
 
     return accumulated
 
 
-def load_questions(bank_dir: Path) -> Dict:
+def load_questions(bank_dir: Path) -> List:
     """Load questions from a bank_dir.
     wrapper of inner_load_questions.
     """
     header("Loading questions")
-    questions = inner_load_questions(bank_dir, {"all": []})
+    questions = inner_load_questions(bank_dir, [])
 
     return questions
 
@@ -127,7 +165,8 @@ def estimated_difficulty_tag(questions, tag) -> float:
 
     for question in questions[tag]:
         if question["difficulty"] is None or question["frequency"] is None:
-            print(f'question: {question["title"]} has no frequency or difficulty')
+            print(
+                f'question: {question["title"]} has no frequency or difficulty')
             continue
 
         sum_numerator += question["difficulty"] * question["frequency"]
@@ -169,7 +208,8 @@ def random_question(questions, tag, num_questions=1) -> List:
         new_possible_questions = {
             tag: [it for it in questions_tag if it is not one_question]
         }
-        output.extend(random_question(new_possible_questions, tag, num_questions - 1))
+        output.extend(random_question(
+            new_possible_questions, tag, num_questions - 1))
 
         return output
 
@@ -196,7 +236,27 @@ def difficulty_list(questions) -> float:
 # EXAM
 
 
+def part_tag_query(part: Dict) -> Dict:
+    """
+    Preprocess tag query from a string
+    """
+    query = []
+    for word in part["tag"].split():
+        if word == ".":
+            b = query.pop()
+            a = query.pop()
+            query.append(f"{a} {b}")
+        else:
+            query.append(word)
+
+    part["tag"] = query
+    return part
+
+
 def load_exam(exam_file: Path) -> Dict:
+    """
+    Load exam description (not the questions)
+    """
     header("Loading exam")
 
     with exam_file.open("r") as fh:
@@ -207,13 +267,15 @@ def load_exam(exam_file: Path) -> Dict:
 
     for part in exam["parts"]:
         # default values
-        npart = {"num_questions": 1}
+        npart = {"num_questions": 1, "tag": ""}
 
         # loading data
         if isinstance(part, str):
             npart["tag"] = part
         else:
             npart.update(part)
+
+        npart = part_tag_query(npart)
 
         new_parts.append(npart)
 
@@ -253,7 +315,8 @@ def load_exam(exam_file: Path) -> Dict:
                     nmacros.append(nmacro)
                 else:
                     # constant macro
-                    nmacros.append({"constant": True, "key": key, "value": value})
+                    nmacros.append(
+                        {"constant": True, "key": key, "value": value})
 
         exam["macros"] = nmacros
 
@@ -269,17 +332,47 @@ def load_exam(exam_file: Path) -> Dict:
     return exam
 
 
-def check_exam(exam: Dict, questions: Dict) -> bool:
-    """Check integrity of exam (all tags are deffined in bank of questions)
+def extract_possibly_questions(exam: Dict, questions: List) -> List:
+    """
+    Read condition for each part in exam and select question that fullfill
+    the requirement.
+    """
+
+    subsets = []
+    for part in exam["parts"]:
+        newsubset = []
+        for question in questions:
+            tags = question["tags"]
+            status = []
+            for word in part["tag"]:
+                if word == "!":
+                    a = status.pop()
+                    status.append(not a)
+                elif word == "&":
+                    a = status.pop()
+                    b = status.pop()
+                    status.append(a and b)
+                elif word == "|":
+                    a = status.pop()
+                    b = status.pop()
+                    status.append(a or b)
+                else:
+                    status.append(word in tags)
+            if status.pop():
+                newsubset.append(question)
+
+        subsets.append(newsubset)
+
+    return subsets
+
+
+def check_exam(exam: Dict, selected_questions: List) -> bool:
+    """Check integrity of exam (all tags are defined in bank of questions)
     and other possibles checks
     """
 
-    for part in exam["parts"]:
-        if part["tag"] not in questions:
-            print("Checking exam:")
-            print(f"  Part: {part} has invalid tag")
-            print(f"  Defined tags: {questions.keys()}")
-            return False
+    for (tag, content) in zip(exam["parts"]["tag"], selected_questions):
+        print(tag, content)
 
     return True
 
@@ -356,8 +449,10 @@ def gen_filenames(exam, counter):
     filename2 = Path(exam["file_notes"])
 
     if counter:
-        file1 = filename1.parent / (filename1.stem + f"_{counter}" + filename1.suffix)
-        file2 = filename2.parent / (filename2.stem + f"_{counter}" + filename2.suffix)
+        file1 = filename1.parent / \
+            (filename1.stem + f"_{counter}" + filename1.suffix)
+        file2 = filename2.parent / \
+            (filename2.stem + f"_{counter}" + filename2.suffix)
         return (file1, file2)
     else:
         # counter == 0
@@ -408,7 +503,8 @@ def render_exam(exam, filenames, exam_instance):
             # functions
             if question["regex"]:
                 text_d, text_n = macro_engine2(
-                    counter, exam["macros"], {"metadata": question}, text_d, text_n
+                    counter, exam["macros"], {
+                        "metadata": question}, text_d, text_n
                 )
 
                 counter += 1
@@ -471,7 +567,8 @@ def main(
         ),
     ],
     bank_dir: Annotated[
-        Optional[Path], typer.Option("--bank", "-b", help="Questions to choose from")
+        Optional[Path], typer.Option(
+            "--bank", "-b", help="Questions to choose from")
     ] = None,
     edition: Annotated[
         Optional[int],
@@ -483,10 +580,12 @@ def main(
         Optional[int], typer.Option("--seed", "-s", help="Seed used")
     ] = None,
     tries: Annotated[
-        int, typer.Option("--tries", "-a", help="Number of tries to generate exam")
+        int, typer.Option(
+            "--tries", "-a", help="Number of tries to generate exam")
     ] = 1000,
     tolerance: Annotated[
-        float, typer.Option("--tolerance", "-t", help="Tolerance to select exam")
+        float, typer.Option("--tolerance", "-t",
+                            help="Tolerance to select exam")
     ] = 0.5,
 ):
     print("index_file", index_file)
@@ -515,7 +614,9 @@ def main(
     # reading questions
     questions = load_questions(bank_dir)
 
-    if not check_exam(exam, questions):
+    selected_questions = extract_possibly_questions(exam, questions)
+
+    if not check_exam(exam, selected_questions):
         print("Dying")
         raise typer.Exit(1)
 

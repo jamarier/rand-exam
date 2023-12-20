@@ -22,7 +22,14 @@ description: |+
 notes: |+ 
   % EXAM 1 
 parts:
-  - addition header
+  - addition header .
+  - uno
+  - dos
+  - tres
+  - uno dos &
+  - uno dos |
+  - uno tres ! &
+  - uno tres ! |
   - {tag: 'addition', num_questions: 1}
-  - product header
+  - product header .
   - {tag: 'product', num_questions: 1} 
