@@ -130,8 +130,7 @@ def inner_load_questions(input_path: Path, accumulated: List) -> List:
                 # default values
                 question["notes"] = question.get("notes", None)
                 question["frequency"] = question.get("frequency", 1)
-                question["title"] = question.get(
-                    "title", question["description"][0:80])
+                question["title"] = question.get("title", question["description"][0:80])
                 # regex key must to be the last because can use info of other keys and values
                 question["regex"] = resolve_auto_regex(question)
 
@@ -153,20 +152,24 @@ def load_questions(bank_dir: Path) -> List:
     return questions
 
 
-def estimated_difficulty_tag(questions, tag) -> float:
+def estimated_difficulty_tag(questions) -> float:
     """
     Estimate difficulty of question list.
 
-    Return weighted difficulty of tag sum(difficulty*frequency) / sum(frequency)
+    Return weighted difficulty of group of questions:
+        sum(difficulty*frequency) / sum(frequency)
     """
 
     sum_numerator = 0
     sum_frequency = 0
 
-    for question in questions[tag]:
+    label("quesions")
+    print(questions)
+
+    for question in questions:
+        print("question", question)
         if question["difficulty"] is None or question["frequency"] is None:
-            print(
-                f'question: {question["title"]} has no frequency or difficulty')
+            print(f'question: {question["title"]} has no frequency or difficulty')
             continue
 
         sum_numerator += question["difficulty"] * question["frequency"]
@@ -175,26 +178,25 @@ def estimated_difficulty_tag(questions, tag) -> float:
     return sum_numerator / sum_frequency
 
 
-def random_question(questions, tag, num_questions=1) -> List:
+def random_question(questions, num_questions=1) -> List:
     """
     Extract `num_questions` random question(s) from bank with
     certain tag
     """
-    questions_tag = questions[tag]
-    assert len(questions_tag) >= num_questions
+    assert len(questions) >= num_questions
 
-    if len(questions_tag) == num_questions or num_questions < 0:
-        return questions_tag
+    if len(questions) == num_questions or num_questions < 0:
+        return questions
 
     if num_questions == 1:
         accum = 0.0
-        for question in questions_tag:
+        for question in questions:
             accum += question["frequency"]
 
         cursor = random.random() * accum
 
         accum = 0.0
-        for question in questions_tag:
+        for question in questions:
             accum += question["frequency"]
             if cursor < accum:
                 return [question]
@@ -202,14 +204,12 @@ def random_question(questions, tag, num_questions=1) -> List:
     if num_questions > 1:
         output = []
 
-        one_question = random_question(questions, tag)[0]
+        one_question = random_question(questions)[0]
         output.append(one_question)
 
-        new_possible_questions = {
-            tag: [it for it in questions_tag if it is not one_question]
-        }
-        output.extend(random_question(
-            new_possible_questions, tag, num_questions - 1))
+        new_possible_questions = [it for it in questions if it is not one_question]
+
+        output.extend(random_question(new_possible_questions, num_questions - 1))
 
         return output
 
@@ -315,8 +315,7 @@ def load_exam(exam_file: Path) -> Dict:
                     nmacros.append(nmacro)
                 else:
                     # constant macro
-                    nmacros.append(
-                        {"constant": True, "key": key, "value": value})
+                    nmacros.append({"constant": True, "key": key, "value": value})
 
         exam["macros"] = nmacros
 
@@ -371,33 +370,37 @@ def check_exam(exam: Dict, selected_questions: List) -> bool:
     and other possibles checks
     """
 
-    for (tag, content) in zip(exam["parts"]["tag"], selected_questions):
-        print(tag, content)
+    for part, content in zip(exam["parts"], selected_questions):
+        tag = part["tag"]
+        if not content:
+            print(f" tag <{tag}> doesn't have any question")
+            return False
 
     return True
 
 
-def estimated_difficulty_exam(exam, questions) -> float:
+def estimated_difficulty_exam(exam, selected_questions) -> float:
     """Return weighted difficulty of tag sum(difficulty*frequency) / sum(frequency)"""
 
     difficulty = 0.0
 
-    for question in exam["parts"]:
-        difficulty += (
-            estimated_difficulty_tag(questions, question["tag"])
-            * question["num_questions"]
-        )
+    label("ede")
+    print(selected_questions)
+
+    for part, questions in zip(exam["parts"], selected_questions):
+        difficulty += estimated_difficulty_tag(questions) * part["num_questions"]
 
     return difficulty
 
 
-def random_exam_item(exam, questions):
+def random_exam_item(exam, selected_questions):
+    """
+    Loop around parts to create a possible exam.
+    """
     possible_exam = []
 
-    for part in exam["parts"]:
-        possible_exam.extend(
-            random_question(questions, part["tag"], part["num_questions"])
-        )
+    for part, questions in zip(exam["parts"], selected_questions):
+        possible_exam.extend(random_question(questions, part["num_questions"]))
 
     difficulty = difficulty_list(possible_exam)
 
@@ -405,6 +408,16 @@ def random_exam_item(exam, questions):
 
 
 def random_exam(exam, questions, tries, tolerance):
+    """
+    Look for a exam, from questions, with difficulty (from exam)
+    and with a limit of tries and tolerance.
+
+    Select by random until tries, and provides the best attempt
+
+    If the requirement are not fullfill, returns a small stats
+    about the attemps done.
+
+    """
     header("Random Exam")
 
     best_difficulty, best_attempt = random_exam_item(exam, questions)
@@ -449,10 +462,8 @@ def gen_filenames(exam, counter):
     filename2 = Path(exam["file_notes"])
 
     if counter:
-        file1 = filename1.parent / \
-            (filename1.stem + f"_{counter}" + filename1.suffix)
-        file2 = filename2.parent / \
-            (filename2.stem + f"_{counter}" + filename2.suffix)
+        file1 = filename1.parent / (filename1.stem + f"_{counter}" + filename1.suffix)
+        file2 = filename2.parent / (filename2.stem + f"_{counter}" + filename2.suffix)
         return (file1, file2)
     else:
         # counter == 0
@@ -503,8 +514,7 @@ def render_exam(exam, filenames, exam_instance):
             # functions
             if question["regex"]:
                 text_d, text_n = macro_engine2(
-                    counter, exam["macros"], {
-                        "metadata": question}, text_d, text_n
+                    counter, exam["macros"], {"metadata": question}, text_d, text_n
                 )
 
                 counter += 1
@@ -567,8 +577,7 @@ def main(
         ),
     ],
     bank_dir: Annotated[
-        Optional[Path], typer.Option(
-            "--bank", "-b", help="Questions to choose from")
+        Optional[Path], typer.Option("--bank", "-b", help="Questions to choose from")
     ] = None,
     edition: Annotated[
         Optional[int],
@@ -580,12 +589,10 @@ def main(
         Optional[int], typer.Option("--seed", "-s", help="Seed used")
     ] = None,
     tries: Annotated[
-        int, typer.Option(
-            "--tries", "-a", help="Number of tries to generate exam")
+        int, typer.Option("--tries", "-a", help="Number of tries to generate exam")
     ] = 1000,
     tolerance: Annotated[
-        float, typer.Option("--tolerance", "-t",
-                            help="Tolerance to select exam")
+        float, typer.Option("--tolerance", "-t", help="Tolerance to select exam")
     ] = 0.5,
 ):
     print("index_file", index_file)
@@ -626,12 +633,14 @@ def main(
     else:
         filenames = gen_filenames(exam, edition)
 
-    exam_instance = random_exam(exam, questions, tries, tolerance)
+    exam_instance = random_exam(exam, selected_questions, tries, tolerance)
     if not exam_instance:
         raise typer.Exit(2)
 
     print("exam wished difficulty", exam["difficulty"])
-    print("exam average difficulty:", estimated_difficulty_exam(exam, questions))
+    print(
+        "exam average difficulty:", estimated_difficulty_exam(exam, selected_questions)
+    )
     print("real difficulty", difficulty_list(exam_instance))
 
     render_exam(exam, filenames, exam_instance)
