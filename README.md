@@ -520,10 +520,6 @@ notes: |+
 
 ## TODO
 
-* Select questions by tag (done) or by file (TODO). Actually you
-  can put several tags to each question. So it is possible to
-  define a tag of type of exercise and other tag the name of the
-  file. And use one or other to select.
 * Avoid the repetition of same question (CHECK). No sure.
   Sometimes is interesting generate the same questions (with
   different values) several times to make drillout exercises (to

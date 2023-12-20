@@ -26,10 +26,10 @@ parts:
   - uno
   - dos
   - tres
-  - uno dos &
+    # - uno dos & # without any question
   - uno dos |
   - uno tres ! &
   - uno tres ! |
   - {tag: 'addition', num_questions: 1}
-  - product header .
+    # - product header .
   - {tag: 'product', num_questions: 1} 
