@@ -1,23 +1,21 @@
 #!/usr/bin/env env/bin/python
 
-import typer
-from typing import Dict, List, Optional
-from typing_extensions import Annotated
 import time
-
-import yaml
+from typing import Dict, List, Optional
 import random
 import re
 from pathlib import Path
 
-from macro_engine1 import macro_engine
+import typer
+from typing_extensions import Annotated
+import yaml
+
 from macro_engine2 import macro_engine2
+from tags import look_compatible_questions
+import counts
 
 # --------------------------------------------------------------------
 # TODO
-
-# Posibility to create macros in exam file (e.g. to uniform headers)
-#   they are processed before VAR operators
 
 # --------------------------------------------------------------------
 # UTILS
@@ -27,6 +25,7 @@ def header(text):
     """
     Create a banner to help to read the logs (open flag)
     """
+    print("")
     print("-" * 40)
     print(f"- {text}")
     print(" ")
@@ -110,7 +109,7 @@ def inner_load_questions(input_path: Path, accumulated: List) -> List:
     Returns a List.
         the values are a list of the questions
     """
-    print(f"loading {input}")
+    print(f"loading {input_path}")
     if input_path.is_dir():
         for subinput in input_path.glob("*"):
             accumulated = inner_load_questions(subinput, accumulated)
@@ -120,7 +119,7 @@ def inner_load_questions(input_path: Path, accumulated: List) -> List:
             for question in questions:
                 # allow to ignore unfinished questions
                 if "ignored" in question:
-                    print(" question ignored")
+                    print(" question ignored.")
                     continue
 
                 # compulsory keys
@@ -130,7 +129,8 @@ def inner_load_questions(input_path: Path, accumulated: List) -> List:
                 # default values
                 question["notes"] = question.get("notes", None)
                 question["frequency"] = question.get("frequency", 1)
-                question["title"] = question.get("title", question["description"][0:80])
+                question["title"] = question.get(
+                    "title", question["description"][0:80])
                 # regex key must to be the last because can use info of other keys and values
                 question["regex"] = resolve_auto_regex(question)
 
@@ -169,7 +169,8 @@ def estimated_difficulty_tag(questions) -> float:
     for question in questions:
         print("question", question)
         if question["difficulty"] is None or question["frequency"] is None:
-            print(f'question: {question["title"]} has no frequency or difficulty')
+            print(
+                f'question: {question["title"]} has no frequency or difficulty')
             continue
 
         sum_numerator += question["difficulty"] * question["frequency"]
@@ -178,42 +179,72 @@ def estimated_difficulty_tag(questions) -> float:
     return sum_numerator / sum_frequency
 
 
-def random_question(questions, num_questions=1) -> List:
+def random_question(questions, num_questions) -> List:
+    """
+    num_questions is a pair of
+        [minimun number of questions, maximun num of questions]
+    select one possible value and extract
+    """
+
+    print("  en random_question, num_questions", num_questions)
+
+    # check it is feasible
+    max_questions = len(questions)
+    assert max_questions >= num_questions[0]
+    num_questions[1] = min(max_questions, num_questions[1])
+
+    # in case all questions asked
+    if max_questions == num_questions[0] or num_questions[0] < 0:
+        return questions
+
+    num_questions_elected = random.randint(num_questions[0], num_questions[1])
+    print("  en random_question, elected", num_questions_elected)
+
+    return random_question_more(questions, num_questions_elected)
+
+
+def random_question_more(questions, num_questions) -> List:
+    """
+    Select num_questions questions from the list of questions
+    """
+
+    if num_questions == 1:
+        return random_question_one(questions)
+    if num_questions == 0:
+        return []
+
+    output = []
+
+    one_question = random_question_one(questions)[0]
+    output.append(one_question)
+
+    new_possible_questions = [it for it in questions if it is not one_question]
+
+    output.extend(random_question_more(
+        new_possible_questions, num_questions - 1))
+
+    return output
+
+
+def random_question_one(questions) -> List:
     """
     Extract `num_questions` random question(s) from bank with
     certain tag
     """
-    assert len(questions) >= num_questions
 
-    if len(questions) == num_questions or num_questions < 0:
-        return questions
+    accum = 0.0
+    for question in questions:
+        accum += question["frequency"]
 
-    if num_questions == 1:
-        accum = 0.0
-        for question in questions:
-            accum += question["frequency"]
+    cursor = random.random() * accum
 
-        cursor = random.random() * accum
+    accum = 0.0
+    for question in questions:
+        accum += question["frequency"]
+        if cursor < accum:
+            return [question]
 
-        accum = 0.0
-        for question in questions:
-            accum += question["frequency"]
-            if cursor < accum:
-                return [question]
-
-    if num_questions > 1:
-        output = []
-
-        one_question = random_question(questions)[0]
-        output.append(one_question)
-
-        new_possible_questions = [it for it in questions if it is not one_question]
-
-        output.extend(random_question(new_possible_questions, num_questions - 1))
-
-        return output
-
-    return []  # 0 options
+    return questions[-1]  # las element
 
 
 # --------------------------------------------------------------------
@@ -236,23 +267,6 @@ def difficulty_list(questions) -> float:
 # EXAM
 
 
-def part_tag_query(part: Dict) -> Dict:
-    """
-    Preprocess tag query from a string
-    """
-    query = []
-    for word in part["tag"].split():
-        if word == ".":
-            b = query.pop()
-            a = query.pop()
-            query.append(f"{a} {b}")
-        else:
-            query.append(word)
-
-    part["tag"] = query
-    return part
-
-
 def load_exam(exam_file: Path) -> Dict:
     """
     Load exam description (not the questions)
@@ -261,6 +275,23 @@ def load_exam(exam_file: Path) -> Dict:
 
     with exam_file.open("r") as fh:
         exam = yaml.safe_load(fh)
+
+    # bank loading
+    if "bank" not in exam:
+        exam["bank"] = None
+    else:
+        exam["bank"] = Path(exam["bank"])
+
+    # other parameters configuration
+    # seed
+    if "seed" not in exam:
+        exam["seed"] = int(time.strftime("%Y%m%d")) * 10  # 10 editions
+
+    if "tries" not in exam:
+        exam["tries"] = 1000
+
+    if "tolerance" not in exam:
+        exam["tolerance"] = 0.5
 
     # loading elements o parts
     new_parts = []
@@ -276,6 +307,7 @@ def load_exam(exam_file: Path) -> Dict:
             npart.update(part)
 
         npart = part_tag_query(npart)
+        npart = part_num_questions(npart)
 
         new_parts.append(npart)
 
@@ -283,11 +315,11 @@ def load_exam(exam_file: Path) -> Dict:
 
     # loading macros
     if "macros" not in exam:
-        exam["macros"] = []
+        exam["macros"]=[]
     else:
         label("MACROS")
 
-        nmacros = []
+        nmacros=[]
 
         for macro in exam["macros"]:
             for (
@@ -298,16 +330,16 @@ def load_exam(exam_file: Path) -> Dict:
             ):  # there is only one macro per entry, but the for is easy to extract that element
                 print(key, "->", value)
                 if "(" in key:
-                    nmacro = {"constant": False, "value": value}
+                    nmacro={"constant": False, "value": value}
 
-                    pattern = re.compile(r"([^()]+)\(([^()]+)\)")
-                    match = pattern.search(key)
+                    pattern=re.compile(r"([^()]+)\(([^()]+)\)")
+                    match=pattern.search(key)
                     if match:
-                        macroname = match.group(1)
-                        args = [it for it in match.group(2).split(",")]
+                        macroname=match.group(1)
+                        args=[it for it in match.group(2).split(",")]
 
-                        nmacro["key"] = macroname
-                        nmacro["args"] = args
+                        nmacro["key"]=macroname
+                        nmacro["args"]=args
                     else:
                         print("Illegal macro in exam description:", macro)
                         raise typer.Exit(4)
@@ -315,16 +347,13 @@ def load_exam(exam_file: Path) -> Dict:
                     nmacros.append(nmacro)
                 else:
                     # constant macro
-                    nmacros.append({"constant": True, "key": key, "value": value})
+                    nmacros.append(
+                        {"constant": True, "key": key, "value": value})
 
-        exam["macros"] = nmacros
-
-    # seed
-    if "seed" not in exam:
-        exam["seed"] = int(time.strftime("%Y%m%d"))
+        exam["macros"]=nmacros
 
     # description and notes (apply macros)
-    exam["description"], exam["notes"] = macro_engine2(
+    exam["description"], exam["notes"]=macro_engine2(
         0, exam["macros"], {"metadata": {}}, exam["description"], exam["notes"]
     )
 
@@ -337,30 +366,9 @@ def extract_possibly_questions(exam: Dict, questions: List) -> List:
     the requirement.
     """
 
-    subsets = []
+    subsets=[]
     for part in exam["parts"]:
-        newsubset = []
-        for question in questions:
-            tags = question["tags"]
-            status = []
-            for word in part["tag"]:
-                if word == "!":
-                    a = status.pop()
-                    status.append(not a)
-                elif word == "&":
-                    a = status.pop()
-                    b = status.pop()
-                    status.append(a and b)
-                elif word == "|":
-                    a = status.pop()
-                    b = status.pop()
-                    status.append(a or b)
-                else:
-                    status.append(word in tags)
-            if status.pop():
-                newsubset.append(question)
-
-        subsets.append(newsubset)
+        subsets.append(look_compatible_questions(part["tag"], questions))
 
     return subsets
 
@@ -371,7 +379,7 @@ def check_exam(exam: Dict, selected_questions: List) -> bool:
     """
 
     for part, content in zip(exam["parts"], selected_questions):
-        tag = part["tag"]
+        tag=part["tag"]
         if not content:
             print(f" tag <{tag}> doesn't have any question")
             return False
@@ -382,13 +390,16 @@ def check_exam(exam: Dict, selected_questions: List) -> bool:
 def estimated_difficulty_exam(exam, selected_questions) -> float:
     """Return weighted difficulty of tag sum(difficulty*frequency) / sum(frequency)"""
 
-    difficulty = 0.0
+    difficulty=[0.0, 0.0]
 
     label("ede")
     print(selected_questions)
 
     for part, questions in zip(exam["parts"], selected_questions):
-        difficulty += estimated_difficulty_tag(questions) * part["num_questions"]
+        difficulty[0] += estimated_difficulty_tag(
+            questions) * part["num_questions"][0]
+        difficulty[1] += estimated_difficulty_tag(
+            questions) * part["num_questions"][1]
 
     return difficulty
 
@@ -397,17 +408,20 @@ def random_exam_item(exam, selected_questions):
     """
     Loop around parts to create a possible exam.
     """
-    possible_exam = []
+    possible_exam=[]
 
     for part, questions in zip(exam["parts"], selected_questions):
+        label("item")
+        print("num_questions", part["num_questions"])
+        print("questions available", len(questions))
         possible_exam.extend(random_question(questions, part["num_questions"]))
 
-    difficulty = difficulty_list(possible_exam)
+    difficulty=difficulty_list(possible_exam)
 
     return (difficulty, possible_exam)
 
 
-def random_exam(exam, questions, tries, tolerance):
+def random_exam(exam, questions):
     """
     Look for a exam, from questions, with difficulty (from exam)
     and with a limit of tries and tolerance.
@@ -418,37 +432,38 @@ def random_exam(exam, questions, tries, tolerance):
     about the attemps done.
 
     """
-    header("Random Exam")
+    header(f"Random Exam. Difficulty: {exam['difficulty']}")
 
-    best_difficulty, best_attempt = random_exam_item(exam, questions)
-    min_difficulty = best_difficulty
-    max_difficulty = best_difficulty
-    tries -= 1
+    best_difficulty, best_attempt=random_exam_item(exam, questions)
 
-    if abs(exam["difficulty"] - best_difficulty) < tolerance:
+    min_difficulty=best_difficulty
+    max_difficulty=best_difficulty
+    exam["tries"] -= 1
+
+    if abs(exam["difficulty"] - best_difficulty) < exam["tolerance"]:
         return best_attempt
 
-    for _ in range(tries):
-        new_difficulty, new_attempt = random_exam_item(exam, questions)
+    for _ in range(exam["tries"]):
+        new_difficulty, new_attempt=random_exam_item(exam, questions)
 
-        min_difficulty = (
+        min_difficulty=(
             new_difficulty if new_difficulty < min_difficulty else min_difficulty
         )
-        max_difficulty = (
+        max_difficulty=(
             new_difficulty if max_difficulty < new_difficulty else max_difficulty
         )
 
         if abs(exam["difficulty"] - new_difficulty) < abs(
             exam["difficulty"] - best_difficulty
         ):
-            best_difficulty = new_difficulty
-            best_attempt = new_attempt
+            best_difficulty=new_difficulty
+            best_attempt=new_attempt
 
-        if abs(exam["difficulty"] - best_difficulty) < tolerance:
+        if abs(exam["difficulty"] - best_difficulty) < exam["tolerance"]:
             return best_attempt
 
     print(
-        f"Not found, range measured ({min_difficulty},{max_difficulty}) best_difficulty: {best_difficulty}"
+        f"Exam not found, range measured ({min_difficulty},{max_difficulty}) best_difficulty: {best_difficulty}"
     )
     return None
 
@@ -458,12 +473,14 @@ def random_exam(exam, questions, tries, tolerance):
 
 
 def gen_filenames(exam, counter):
-    filename1 = Path(exam["file_descriptions"])
-    filename2 = Path(exam["file_notes"])
+    filename1=Path(exam["file_descriptions"])
+    filename2=Path(exam["file_notes"])
 
     if counter:
-        file1 = filename1.parent / (filename1.stem + f"_{counter}" + filename1.suffix)
-        file2 = filename2.parent / (filename2.stem + f"_{counter}" + filename2.suffix)
+        file1=filename1.parent / \
+            (filename1.stem + f"_{counter}" + filename1.suffix)
+        file2=filename2.parent / \
+            (filename2.stem + f"_{counter}" + filename2.suffix)
         return (file1, file2)
     else:
         # counter == 0
@@ -471,14 +488,14 @@ def gen_filenames(exam, counter):
 
 
 def locate_empty_filename(exam):
-    counter = 0
+    counter=0
 
-    file1, file2 = gen_filenames(exam, counter)
+    file1, file2=gen_filenames(exam, counter)
 
     print("testing", file1, file2)
     while file1.exists() or file2.exists():
         counter += 1
-        file1, file2 = gen_filenames(exam, counter)
+        file1, file2=gen_filenames(exam, counter)
         print("testing", file1, file2)
 
     return (file1, file2)
@@ -491,30 +508,31 @@ def locate_empty_filename(exam):
 def render_exam(exam, filenames, exam_instance):
     header("Rendering")
 
-    filename_description, filename_notes = filenames
+    filename_description, filename_notes=filenames
 
-    counter = 1
+    counter=1
 
     with filename_description.open("w") as fh_d, filename_notes.open("w") as fh_n:
         if "description" in exam:
-            text_d = exam["description"]
+            text_d=exam["description"]
             fh_d.write(text_d + "\n")
 
         if "notes" in exam:
-            text_n = exam["notes"]
+            text_n=exam["notes"]
             fh_n.write(text_n + "\n")
 
         for question in exam_instance:
             header("question")
             print(question["title"])
 
-            text_d = question["description"]
-            text_n = question["notes"] if question["notes"] else ""
+            text_d=question["description"]
+            text_n=question["notes"] if question["notes"] else ""
 
             # functions
             if question["regex"]:
-                text_d, text_n = macro_engine2(
-                    counter, exam["macros"], {"metadata": question}, text_d, text_n
+                text_d, text_n=macro_engine2(
+                    counter, exam["macros"], {
+                        "metadata": question}, text_d, text_n
                 )
 
                 counter += 1
@@ -530,7 +548,7 @@ def render_exam(exam, filenames, exam_instance):
 
 
 def create_index_file(index_file: Path):
-    output = """
+    output="""
 ---
 comment: Catalogue of questions
 difficulty: 0
@@ -577,51 +595,53 @@ def main(
         ),
     ],
     bank_dir: Annotated[
-        Optional[Path], typer.Option("--bank", "-b", help="Questions to choose from")
-    ] = None,
+        Optional[Path], typer.Option(
+            "--bank", "-b", help="Questions to choose from")
+    ]=None,
     edition: Annotated[
         Optional[int],
         typer.Option(
             "--edition", "-e", help="Force edition. If None, look for first empty"
         ),
-    ] = None,
+    ]=None,
     seed: Annotated[
         Optional[int], typer.Option("--seed", "-s", help="Seed used")
-    ] = None,
+    ]=None,
     tries: Annotated[
-        int, typer.Option("--tries", "-a", help="Number of tries to generate exam")
-    ] = 1000,
+        int, typer.Option(
+            "--tries", "-a", help="Number of tries to generate exam")
+    ]=None,
     tolerance: Annotated[
-        float, typer.Option("--tolerance", "-t", help="Tolerance to select exam")
-    ] = 0.5,
+        float, typer.Option("--tolerance", "-t",
+                            help="Tolerance to select exam")
+    ]=None,
 ):
     print("index_file", index_file)
     if not index_file.exists():
         create_index_file(index_file)
         return
 
-    exam = load_exam(index_file)
+    exam=load_exam(index_file)
 
-    # bank_dir loading/checking
-    if bank_dir is None:
-        if "bank" in exam:
-            bank_dir = Path(exam["bank"])
-        else:
-            raise ValueError("No bank dir in index_file or CLI options")
+    # Loading options
+    for parameter, cli_parameter in [
+        ("bank", bank_dir),
+        ("seed", seed),
+        ("tries", tries),
+        ("tolerance", tolerance),
+    ]:
+        if cli_parameter:
+            exam[parameter]=cli_parameter
 
-    # reading seed
-    if seed is None:
-        if "seed" in exam:
-            seed = exam["seed"]
-        else:
-            print("No seed in index_file or CLI options. Using default seed")
-    else:
-        random.seed(seed)
+    # Especific options configuration
+    if exam["bank"] is None:
+        raise ValueError("No bank dir in index_file or CLI options")
+    random.seed(exam["seed"])
 
     # reading questions
-    questions = load_questions(bank_dir)
+    questions=load_questions(bank_dir)
 
-    selected_questions = extract_possibly_questions(exam, questions)
+    selected_questions=extract_possibly_questions(exam, questions)
 
     if not check_exam(exam, selected_questions):
         print("Dying")
@@ -629,17 +649,18 @@ def main(
 
     # output filename construction
     if edition is None:
-        filenames = locate_empty_filename(exam)
+        filenames=locate_empty_filename(exam)
     else:
-        filenames = gen_filenames(exam, edition)
+        filenames=gen_filenames(exam, edition)
 
-    exam_instance = random_exam(exam, selected_questions, tries, tolerance)
+    exam_instance=random_exam(exam, selected_questions)
     if not exam_instance:
         raise typer.Exit(2)
 
     print("exam wished difficulty", exam["difficulty"])
     print(
-        "exam average difficulty:", estimated_difficulty_exam(exam, selected_questions)
+        "exam average difficulty:", estimated_difficulty_exam(
+            exam, selected_questions)
     )
     print("real difficulty", difficulty_list(exam_instance))
 
