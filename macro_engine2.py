@@ -228,6 +228,29 @@ def op_FOR(args, vars: Mapping) -> Tuple[str, Mapping]:
     return torepeat * times, vars
 
 
+@register_op("CASES")
+def op_CASES(args, vars: Mapping) -> Tuple[str, Mapping]:
+    """
+    ((CASES,input,match1,value1,match2,value2,...,default))
+
+    Take input and compare with match*, take value if input is equal to match.
+    The last value is the default if no match is found.
+        (if you do not have default, the output is empty)
+    """
+    tomatch = args.pop(0)
+    while args:
+        match_clause = args.pop(0)
+        if not args:
+            return match_clause, vars
+
+        value = args.pop(0)
+
+        if tomatch == match_clause:
+            return value, vars
+
+    return "", vars
+
+
 @register_op("ID")
 def op_ID(args, vars: Mapping) -> Tuple[str, Mapping]:
     return args.pop(0), vars

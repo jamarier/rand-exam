@@ -72,61 +72,14 @@ notes: |+
 
   c = VARV(a)+VARV(b)
   VERIFY_VARIABLE(c)
-
 ---
 tags:
-  - addition
-difficulty: 1
-regex: false
-description: |+
-  HEADER
-
-  Calculate the addition of VARINT(a,1,9) and VARINTRANGE(b,1,9,2) and store in
-  VARQ(c).
-
-notes: |+
-  HEADER_NOTES
-
-  c = VARV(a)+VARV(b)
-  VERIFY_VARIABLE(c)
-
----
-tags:
-  - uno
-difficulty: 0
-description: |+
-  uno
----
-tags:
-  - dos
-difficulty: 0
-description: |+
-  dos
----
-tags:
-  - tres
-  - uno
-difficulty: 0
-description: |+
-  tres y uno
----
-tags:
-  - dos
-difficulty: 0
-description: |+
-  otro dos
----
-tags:
-  - product
+  - cases 
 difficulty: 1
 description: |+
-  HEADER
+  ((HEADER))
 
-  Calculate the product VARFLOATRANGE(a,1,5,0.5) and VAROP(b,2.0,5.0,10.0) and store in
-  VARQ(c).
+  var: ((VAR,a,INT,0,5))
+  ((CASES,((a)),0,cero,1,uno,2,dos,3,tres,4,cuatro,5,cinco))
+  ((CASES,((a)),0,par,2,par,4,par,impar))
 
-notes: |+
-  HEADER_NOTES
-
-  c = VARV(a)*VARV(b)
-  VERIFY_VARIABLE(c)
