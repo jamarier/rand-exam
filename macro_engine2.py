@@ -318,6 +318,28 @@ def run_function(key, *args, vars, macros={}) -> Tuple[str, Mapping]:
     return text, vars
 
 
+def load_next_macro(text: str) -> Tuple:
+    """
+    Load next macro and return a tuple with all elements to process
+
+    Return values: (previous, macro_name, args, post)
+    where:
+        previous: all the text before de macro
+        macro_name: the name of the macro
+        args: array of args or [] if there is no args
+        post: text after macro call
+    """
+    previous, macro, post = locate_macro(text)
+
+    if not macro:
+        return (previous, "", [], "")
+
+    args = macro.split(",")
+    key = args.pop(0)
+
+    return (previous, key, args, post)
+
+
 def macro_engine2_single(macros, vars, text) -> str:
     """
      In this engine, the activation of a macro is always in the shape:
@@ -333,13 +355,9 @@ def macro_engine2_single(macros, vars, text) -> str:
      (To avoid to parse)
 
     """
-    previous, macro, post = locate_macro(text)
-
-    if not macro:
+    previous, key, args, post = load_next_macro(text)
+    if not key:
         return previous
-
-    args = macro.split(",")
-    key = args.pop(0)
 
     # DNL, remove from macro invocation to newline inclusive
     if key == "DNL":

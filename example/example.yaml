@@ -5,15 +5,15 @@ file_descriptions: exam.md
 file_notes: exam.m
 tolerance: 1000
 macros:
-  - HEADER: |+
-    ## Task VARNUM
-  - HEADER_NOTES: "\n% Task VARNUM\n"
-  - RESULT_NOTES: "disp('Result for task VARNUM:')"
-  - VERIFY_VARIABLE(@a): |+
-      RESULT_NOTES
-      diff = COMPARE_ARRAYS(@a,VARQ(@a))
-  - COMPARE_ARRAYS(@a,@b): sum(abs(@a-@b))(:))
-  - VARQ(@a): t((COUNTER))_@a
+  ((HEADER)): |+
+    ## Task ((COUNTER)) 
+  ((HEADER_NOTES)): "\n% Task ((COUNTER))\n"
+  ((RESULT_NOTES)): "disp('Result for task VARNUM:')"
+  ((VERIFY_VARIABLE,@a)): |+
+      ((RESULT_NOTES))
+      diff = ((COMPARE_ARRAYS,@a,((VARQ,@a))))
+  ((COMPARE_ARRAYS,@a,@b)): sum(abs(@a-@b))(:))
+  ((VARQ,@a)): t((COUNTER))_@a
 description: |+
   # EXAM 1
   Name: 

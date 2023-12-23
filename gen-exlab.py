@@ -11,7 +11,7 @@ import typer
 from typing_extensions import Annotated
 import yaml
 
-from macro_engine2 import macro_engine2
+from macro_engine2 import macro_engine2, load_next_macro
 from tags import look_compatible_questions
 import counter
 
@@ -130,8 +130,7 @@ def inner_load_questions(input_path: Path, accumulated: List) -> List:
                 # default values
                 question["notes"] = question.get("notes", None)
                 question["frequency"] = question.get("frequency", 1)
-                question["title"] = question.get(
-                    "title", question["description"][0:80])
+                question["title"] = question.get("title", question["description"][0:80])
                 # regex key must to be the last because can use info of other keys and values
                 question["regex"] = resolve_auto_regex(question)
 
@@ -170,8 +169,7 @@ def estimated_difficulty_tag(questions) -> float:
     for question in questions:
         print("question", question)
         if question["difficulty"] is None or question["frequency"] is None:
-            print(
-                f'question: {question["title"]} has no frequency or difficulty')
+            print(f'question: {question["title"]} has no frequency or difficulty')
             continue
 
         sum_numerator += question["difficulty"] * question["frequency"]
@@ -212,8 +210,7 @@ def random_question_more(questions, num_questions) -> List:
 
     new_possible_questions = [it for it in questions if it is not one_question]
 
-    output.extend(random_question_more(
-        new_possible_questions, num_questions - 1))
+    output.extend(random_question_more(new_possible_questions, num_questions - 1))
 
     return output
 
@@ -285,26 +282,6 @@ def load_exam(exam_file: Path) -> Dict:
     if "tolerance" not in exam:
         exam["tolerance"] = 0.5
 
-    # loading elements o parts
-    # new_parts = []
-
-    # for part in exam["parts"]:
-    #    # default values
-    #    npart = {"num_questions": 1, "tag": ""}
-
-    #    # loading data
-    #    if isinstance(part, str):
-    #        npart["tag"] = part
-    #    else:
-    #        npart.update(part)
-
-    #    npart = part_tag_query(npart)
-    #    npart = part_num_questions(npart)
-
-    #    new_parts.append(npart)
-
-    # exam["parts"] = new_parts
-
     # loading macros
     if "macros" not in exam:
         exam["macros"] = []
@@ -313,34 +290,15 @@ def load_exam(exam_file: Path) -> Dict:
 
         nmacros = []
 
-        for macro in exam["macros"]:
-            for (
-                key,
-                value,
-            ) in (
-                macro.items()
-            ):  # there is only one macro per entry, but the for is easy to extract that element
-                print(key, "->", value)
-                if "(" in key:
-                    nmacro = {"constant": False, "value": value}
-
-                    pattern = re.compile(r"([^()]+)\(([^()]+)\)")
-                    match = pattern.search(key)
-                    if match:
-                        macroname = match.group(1)
-                        args = [it for it in match.group(2).split(",")]
-
-                        nmacro["key"] = macroname
-                        nmacro["args"] = args
-                    else:
-                        print("Illegal macro in exam description:", macro)
-                        raise typer.Exit(4)
-
-                    nmacros.append(nmacro)
-                else:
-                    # constant macro
-                    nmacros.append(
-                        {"constant": True, "key": key, "value": value})
+        for key, value in exam["macros"].items():
+            print(key, "->", value)
+            _previous, key, args, _post = load_next_macro(key)
+            if args:
+                nmacros.append(
+                    {"constant": False, "key": key, "args": args, "value": value}
+                )
+            else:
+                nmacros.append({"constant": True, "key": key, "value": value})
 
         exam["macros"] = nmacros
 
@@ -388,10 +346,8 @@ def estimated_difficulty_exam(exam, selected_questions) -> float:
     print(selected_questions)
 
     for part, questions in zip(exam["parts"], selected_questions):
-        difficulty[0] += estimated_difficulty_tag(
-            questions) * part["num_questions"][0]
-        difficulty[1] += estimated_difficulty_tag(
-            questions) * part["num_questions"][1]
+        difficulty[0] += estimated_difficulty_tag(questions) * part["num_questions"][0]
+        difficulty[1] += estimated_difficulty_tag(questions) * part["num_questions"][1]
 
     return difficulty
 
@@ -486,10 +442,8 @@ def gen_filenames(exam, counter):
     filename2 = Path(exam["file_notes"])
 
     if counter:
-        file1 = filename1.parent / \
-            (filename1.stem + f"_{counter}" + filename1.suffix)
-        file2 = filename2.parent / \
-            (filename2.stem + f"_{counter}" + filename2.suffix)
+        file1 = filename1.parent / (filename1.stem + f"_{counter}" + filename1.suffix)
+        file2 = filename2.parent / (filename2.stem + f"_{counter}" + filename2.suffix)
         return (file1, file2)
     else:
         # counter == 0
@@ -540,8 +494,7 @@ def render_exam(exam, filenames, exam_instance):
             # functions
             if question["regex"]:
                 text_d, text_n = macro_engine2(
-                    counter, exam["macros"], {
-                        "metadata": question}, text_d, text_n
+                    counter, exam["macros"], {"metadata": question}, text_d, text_n
                 )
 
                 counter += 1
@@ -603,8 +556,7 @@ def main(
         ),
     ],
     bank_dir: Annotated[
-        Optional[Path], typer.Option(
-            "--bank", "-b", help="Questions to choose from")
+        Optional[Path], typer.Option("--bank", "-b", help="Questions to choose from")
     ] = None,
     edition: Annotated[
         Optional[int],
@@ -616,12 +568,10 @@ def main(
         Optional[int], typer.Option("--seed", "-s", help="Seed used")
     ] = None,
     tries: Annotated[
-        int, typer.Option(
-            "--tries", "-a", help="Number of tries to generate exam")
+        int, typer.Option("--tries", "-a", help="Number of tries to generate exam")
     ] = None,
     tolerance: Annotated[
-        float, typer.Option("--tolerance", "-t",
-                            help="Tolerance to select exam")
+        float, typer.Option("--tolerance", "-t", help="Tolerance to select exam")
     ] = None,
 ):
     print("index_file", index_file)
