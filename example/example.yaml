@@ -27,9 +27,8 @@ parts:
   - dos
   - tres
     # - uno dos & # without any question
-  - uno dos |
+  - uno dos |: 2-*
   - uno tres ! &
   - uno tres ! |
-  - {tag: 'addition', num_questions: 1}
-    # - product header .
-  - {tag: 'product', num_questions: 1-2} 
+  - addition
+  - product: 1-2
