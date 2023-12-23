@@ -3,6 +3,7 @@ comment: 1st Part. 2023-03
 difficulty: 2
 file_descriptions: exam.md
 file_notes: exam.m
+tolerance: 1000
 macros:
   - HEADER: |+
     ## Task VARNUM
@@ -12,6 +13,7 @@ macros:
       RESULT_NOTES
       diff = COMPARE_ARRAYS(@a,VARQ(@a))
   - COMPARE_ARRAYS(@a,@b): sum(abs(@a-@b))(:))
+  - VARQ(@a): t((COUNTER))_@a
 description: |+
   # EXAM 1
   Name: 
@@ -22,13 +24,12 @@ description: |+
 notes: |+ 
   % EXAM 1 
 parts:
-  - addition header .
-  - uno
-  - dos
-  - tres
-    # - uno dos & # without any question
-  - uno dos |: 2-*
-  - uno tres ! &
-  - uno tres ! |
-  - addition
-  - product: 1-2
+  - header 
+  - all: -1
+  - header
+  - addition: -1
+  - substraction: -1
+  - header
+  - one digit . : -1
+  - header
+  - substraction two digit . &: -1
