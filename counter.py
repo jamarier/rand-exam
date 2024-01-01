@@ -87,6 +87,7 @@ class Counter:
         - structure (input)
             - *  -> (0,*)
             - +  -> (1,*)
+            - ?  -> (0,1)
             - 2-* -> (2,*)
             - otherwhise -> ("unknown","unknown")
         - min:
@@ -109,6 +110,11 @@ class Counter:
         if structure == "+":
             self.min = 1
             self.max = "*"
+            return
+
+        if structure == "?":
+            self.min = 0
+            self.max = 1
             return
 
         match = re.fullmatch(r"(-?\d+)", structure)
