@@ -26,6 +26,14 @@ def find_questions(structure, questions) -> List:
 class Counter:
     """
     Class to measure/control/calculate number of questions in exam
+
+    attributes:
+        lemma: text to define questions
+        bank: list of questions following lemma
+        children: subtree in the structure of the counter
+        min: min number of questions can be choosen
+        max: max number of questions can be choosen
+        taken: final number of questions taken
     """
 
     def __init__(self, structure, questions):
@@ -131,10 +139,18 @@ class Counter:
                 self.max = int(match[2])
             return
 
-        # tags
-        self.min = 1
-        self.max = 1
+        # tags -> searching for questions
         self.bank = find_questions(structure, questions)
+        if self.bank:
+            self.min = 1
+            self.max = 1
+        else:
+            print(questions)
+            raise ValueError(
+                f"""
+Lemma: <{self.lemma}> doesn't have any question in question_bank
+        """
+            )
 
     def _init_list(self, structure: list, questions):
         """
@@ -217,9 +233,10 @@ class Counter:
 Trying to pair with key:
 
 {key_counter}
-and value:
 
+and value:
 {value_counter}
+
 and I do not know how to do it.
         """
         )

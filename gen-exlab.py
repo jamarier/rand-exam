@@ -13,7 +13,7 @@ import yaml
 
 from macro_engine2 import macro_engine2, load_next_macro
 from tags import look_compatible_questions
-import counter
+from counter import Counter
 
 # --------------------------------------------------------------------
 # TODO
@@ -90,10 +90,11 @@ def load_tags(question, filestem):
     """
 
     tags = set()
-    tags.add(filestem)
 
-    if question["regex"]:
+    if question["autotag"]:
+        tags.add(filestem)
         tags.add("all")
+
     if "tags" in question:
         if isinstance(question["tags"], str):
             tags.add(question["tags"])
@@ -123,6 +124,23 @@ def inner_load_questions(input_path: Path, accumulated: List) -> List:
                     print(" question ignored.")
                     continue
 
+                # Temporal warning of old formats
+                if question.get("difficulty", -1) == 0:
+                    raise ValueError(
+                        f"""
+ question {question} has difficulty 0. Old format, it has to declare scaffold
+ """
+                    )
+
+                # scaffold cases
+                if "scaffold" in question and question["scaffold"] is not False:
+                    print("scaffold")
+                    question["scaffold"] = True
+                    question["difficulty"] = 0
+                    question["autotag"] = False
+                else:
+                    question["scaffold"] = False
+
                 # compulsory keys
                 check_compulsory(question, ["description", "difficulty"])
                 question = check_description(question)
@@ -131,6 +149,7 @@ def inner_load_questions(input_path: Path, accumulated: List) -> List:
                 question["notes"] = question.get("notes", None)
                 question["frequency"] = question.get("frequency", 1)
                 question["title"] = question.get("title", question["description"][0:80])
+                question["autotag"] = question.get("autotag", True)
                 # regex key must to be the last because can use info of other keys and values
                 question["regex"] = resolve_auto_regex(question)
 
@@ -445,23 +464,28 @@ def gen_filenames(exam, counter):
         file1 = filename1.parent / (filename1.stem + f"_{counter}" + filename1.suffix)
         file2 = filename2.parent / (filename2.stem + f"_{counter}" + filename2.suffix)
         return (file1, file2)
-    else:
-        # counter == 0
-        return (filename1, filename2)
+
+    # counter == 0
+    return (filename1, filename2)
 
 
 def locate_empty_filename(exam):
+    """
+    Look for the first edition not generated yet.
+
+    Return available output filenames and the edition number
+    """
     counter = 0
 
     file1, file2 = gen_filenames(exam, counter)
 
-    print("testing", file1, file2)
+    print("Testing existence of:", file1, file2)
     while file1.exists() or file2.exists():
         counter += 1
         file1, file2 = gen_filenames(exam, counter)
         print("testing", file1, file2)
 
-    return (file1, file2)
+    return (file1, file2), counter
 
 
 # --------------------------------------------------------------------
@@ -469,6 +493,11 @@ def locate_empty_filename(exam):
 
 
 def render_exam(exam, filenames, exam_instance):
+    """
+    Create the output filename of description and notes.
+
+    Apply macro engine to substitute macros and update question counter
+    """
     header("Rendering")
 
     filename_description, filename_notes = filenames
@@ -497,6 +526,7 @@ def render_exam(exam, filenames, exam_instance):
                     counter, exam["macros"], {"metadata": question}, text_d, text_n
                 )
 
+            if not question["scaffold"]:
                 counter += 1
 
             fh_d.write(text_d + "\n")
@@ -594,14 +624,21 @@ def main(
     # Especific options configuration
     if exam["bank"] is None:
         raise ValueError("No bank dir in index_file or CLI options")
-    random.seed(exam["seed"])
+
+    # Edition
+    if edition is None:
+        filenames, edition = locate_empty_filename(exam)
+    else:
+        filenames = gen_filenames(exam, edition)
+
+    random.seed(exam["seed"] + edition)
 
     # reading questions
-    questions = load_questions(bank_dir)
+    questions = load_questions(exam["bank"])
 
     # count bank of questions
     header("Counting questions")
-    exam["parts"] = counter.Counter(exam["parts"], questions)
+    exam["parts"] = Counter(exam["parts"], questions)
     print(exam["parts"])
     if not exam["parts"].is_correct():
         print("Dying, parts description is not correct")
@@ -609,12 +646,6 @@ def main(
     print(exam["parts"])
 
     # selected_questions = extract_possibly_questions(exam, questions)
-
-    # output filename construction
-    if edition is None:
-        filenames = locate_empty_filename(exam)
-    else:
-        filenames = gen_filenames(exam, edition)
 
     exam_instance = random_exam(exam)
     if not exam_instance:

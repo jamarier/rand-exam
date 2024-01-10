@@ -42,10 +42,11 @@ def remove_to_nl(text: str) -> str:
     Remove all text until end or newline
     """
     pos = text.find("\n")
+
     if pos < 0:
         return ""
-    else:
-        return text[pos + 1 :]
+
+    return text[pos + 1 :]
 
 
 def apply_macro_user(macro, args) -> str:

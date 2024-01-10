@@ -26,9 +26,12 @@ Usage: gen-exlab.py [OPTIONS] INDEX\_FILE BANK\_DIR
 Arguments:
 
 *  INDEX\_FILE  Structure of exam  [required]
-*  BANK\_DIR    Questions to choose  [required]
 
 Options:
+
+* -b, --bank DIR. Directory with bank of questions.
+
+    This parameter can be defined also in INDEX\_FILE
 
 * -e, --edition INTEGER  Force edition. If None, look for first empty
 
@@ -42,6 +45,13 @@ Options:
     the BANK\_DIR is altered (i.e. adding a random var in a question). 
     Can alter the questions (CHECK)
 
+    This parameter can be defined also in INDEX\_FILE
+
+    The real seed is this seed parameter added with edition. It is a good strategy
+    use the date (numeric) of the exam as seed multiplied by 10 or 100. So 
+    edition 1 of date 20231011 will use a different seed (202310111) than edition 0 of 
+    date 20231012 (202310120). 
+
 * -a, --tries INTEGER    Number of tries to generate exam  [default: 1000]
 
     The exam is generate trying random posibilities. This parameter says how
@@ -50,11 +60,15 @@ Options:
     If the target is not achieved, inform of the best result, the maximum
     difficulty generated and the minimum.
 
+    This parameter can be defined also in INDEX\_FILE
+
 * -t, --tolerance FLOAT  Tolerance to select exam  [default: 0.5]
 
     Sets the range of values to stop searching an exam. if target difficulty is
     11 and tolerance is 1, it stop if calculated difficulty value is in
     [11-1,11+1]
+
+    This parameter can be defined also in INDEX\_FILE
 
 * --help                 Show this message and exit.
 
@@ -66,6 +80,10 @@ Structure:
 ```yaml
 ---
 comment: <text>
+bank: <dir>
+seed: <int>
+tolerance: <float>
+tries: <int>
 difficulty: <number>
 file_descriptions: <filename1>
 file_notes: <filename2>
@@ -81,6 +99,10 @@ seed: <number>
 Description of attributes:
 
 * **comment** comment to describe the exam. (Year, subject, ....)
+* **bank** same as command line parameter
+* **seed** same as command line parameter
+* **tolerance** same as command line parameter
+* **tries** same as command line parameter
 * **difficulty** desired difficulty of the exam
 * **file\_descriptions** File to generate with the questions
 * **file\_notes** File to generate answers or corrector
@@ -90,7 +112,9 @@ Description of attributes:
   are substituted.
 * **notes** Preamble to put at the begginning of file\_notes. Macros are
   substituted.
-* **parts** The exam is a list of blocks and each block is defined with a tags
+* **parts** TODO: OBSOLETE
+  
+  The exam is a list of blocks and each block is defined with a tags
   or question type. In parts array, there is a list of these blocks with
   information about the tag to be used and the amount of questions to use in
   that block.
@@ -128,10 +152,25 @@ Description of attributes:
 ### MACROS
 
 Macros is a string substitution with almost no syntax in a similar way to m4
-macro languaje (simpler than m4). Each macro has a trigger (an string), optional
-arguments and a content. The only real requirement is do not use '(' in the
-trigger string or ',' in the list of arguments. You can use any other caracter
-(space too) but for your sanity, follow this recomendations:
+macro languaje (simpler than m4). Each macro has two possible structures:
+
+    '((' trigger '))'
+
+or 
+    '((' trigger , list_of_arguments_separated_with_commas '))'
+
+The declaration and the invocation has same structure: double parentheses,
+trigger string, and an optional list of arguments separated by commas. The
+triggers and the arguments are treated as strings without stripping of spaces.
+So if you use "(( trigger))" the trigger string will be " trigger" with the
+space. 
+
+Macros can be nested, in the invocation (inside of macro invocation, in the
+argument) or in the contents. The use of nested macros inside of macro
+definition is a undefined behaviour. 
+
+You can use any other caracter (space too) in trigger text and argument names
+but for your sanity, follow this recomendations in definition of macros:
 
 * For triggers use only UPPERCASE and '\_'.
 * The arguments is a list of strings between parentheses with comma (',') as
@@ -149,23 +188,25 @@ Macro are the same for all questions.
 
 Examples:
 ```yaml
-  - HEADER_NOTES: "text"
-  - HEADER: |+
-      YAML allows multiline text. We use here
-      HEADER_NOTES
+  ((HEADER_NOTES)): "text"
+  ((HEADER)): |+
+    YAML allows multiline text. We use here
+    ((HEADER_NOTES))
 ```
+
+A macro can call another macro. In the example, the second "((HEADER_NOTES))" is a invocation, not a definition.
 
 ##### Macros with arguments in INDEX\_FILE
 
 ```yaml
-  - HEADER(@a,@b): "print('***** @a ----- @b')"
-  - HEADER2(@a,$b): "print('***** @a ----- @b $b')"
+  ((HEADER,@a,@b)): "print('***** @a ----- @b')"
+  ((HEADER2,@a,$b)): "print('***** @a ----- @b $b')"
 ```
 
 You can use any string to define argument and they are always substituted
 (there is no escape) or protection inside a string.
 
-In `HEADER2` the second arg changed the sigil to be able to write @b without
+In `HEADER2` the second arg changed the sigil to protect the @b and avoid
 substitution.
 
 ## Macro engine 2
@@ -199,7 +240,7 @@ All arguments are strings, but certains functions can convert to a number if it
 is needed. Extra arguments are ignored. 
 
 A macro defined as: 
-  `- HEADER(@a,@b): "print('***** @a ----- @b')"`
+  `((HEADER,@a,@b)): "print('***** @a ----- @b')"`
 is invoqued: ((HEADER,one,two))
 
 To get the value of a variable put the name in double parentheses: ((myvariable))
@@ -366,6 +407,7 @@ document is a question.
 Structure of question:
 ```yaml
 title: <string>
+scaffold: <boolean (Default False)>
 tags: <string or array of strings>  
 difficulty: <number>                #compulsory
 frequency: <number>
@@ -373,31 +415,41 @@ description: <text of question>     #compulsory
 notes: <text of answer/autocorrect>
 ignored: <bool>
 regex: <auto or bool>
+autotag: <bool (default True)>
 ```
 
 * **title** A title only for document the question. Maybe an example of
   question or a small description. Optional
-* **tags** A string with a tag or a list of strings. Two tags are automagically added to
-  each question:
+* **scaffold** This is not a real question. Its a piece of text to add to 
+  an exam. Like title of exam, name of section, header. Useful, for instance to 
+  create he header and end of LaTeX document. The tags of this no-question have to be 
+  unique to select this exact element. A scaffold imply no autotags, and difficult = 0
+  
+  ```yaml
+  scaffold: true
+  scaffold:
+  ```
+  Any value except "false" will be considered as "true"
+
+  The state variable ((COUNTER)) is incremented always except in questions 
+  with scaffold active.
+* **tags** A string with a tag or a list of strings. 
+* **autotag** If True, add two tags automagically to tags list:
   * the filename (without the yaml extension) and,
-  * `all` (if regex is true, also include auto if is the result it true).
-* **difficulty** difficulty asigned. Compulsory. It is possible to assign
-  difficulty=0. To headers and other parts.
+  * `all` 
+* **difficulty** difficulty asigned. Compulsory except if scaffold key is present and 
+  with value not false. 
 * **frequency** Bigger value implies more probability to be selected. Default
   value=1.
-* **description** Text of the question.
+* **description** Text of the question. Compulsory
 * **notes** Text of the answer/autocorrection file
 * **ignored** question ignored.
-* **regex** Says if the macro engine is going to be used and if it is a real
-  question or not.
-  * true: yes with macros. Real question.
-  * false: without macros. Header.
+* **regex** Says if the macro engine is going to be used.
+  * true: yes with macros. 
+  * false: without macros. 
   * auto: look for any "((" operator in the description and notes text. If
     there is any, the macro engine is used, otherwise the macros are not used.
     Default value. 
-
-  When macro engine is disconected, the var `COUNTER` is not incremented. This
-  allow to create labels, without loose the number of the question.
 
 ## FAQ - other questions
 
@@ -445,14 +497,14 @@ difficulty: 2
 file_descriptions: exam.md
 file_notes: exam.m
 macros:
-  - HEADER: |+
-    ## Task VARNUM
-  - HEADER_NOTES: "\n% Task VARNUM\n"
-  - RESULT_NOTES: "disp('Result for task VARNUM:')"
-  - VERIFY_VARIABLE(@a): |+
-      RESULT_NOTES
-      diff = COMPARE_ARRAYS(@a,VARQ(@a))
-  - COMPARE_ARRAYS(@a,@b): sum(abs(@a-@b))(:))
+  ((HEADER)): |+
+    ## Task ((COUNTER))
+  ((HEADER_NOTES)): "\n% Task ((COUNTER))\n"
+  ((RESULT_NOTES)): "disp('Result for task ((COUNTER)):')"
+  ((VERIFY_VARIABLE,@a)): |+
+      ((RESULT_NOTES))
+      diff = ((COMPARE_ARRAYS,@a,((VARQ,@a))))
+  ((COMPARE_ARRAYS,@a,@b)): sum(abs(@a-@b))(:))
 description: |+
   # EXAM 1
   Name: 
@@ -463,18 +515,17 @@ description: |+
 notes: |+ 
   % EXAM 1
 parts:
-  - addition header
-  - {tag: 'addition', num_questions: 1}
-  - product header
-  - {tag: 'product', num_questions: 1} 
+  addition header .:
+  addition: 1
+  product header .:
+  product: 1 
 ``` 
 
 ### BANK\_DIR
 ```
 ---
-tags:
-  - addition header
-difficulty: 0
+tags: addition header
+scaffold:
 description: |+
   ## Additions
 
@@ -483,21 +534,20 @@ tags:
   - addition
 difficulty: 1
 description: |+
-  HEADER
+  ((HEADER))
 
-  Calculate the addition of VARINT(a,1,9) and VARINTRANGE(b,1,9,2) and store in
-  VARQ(c).
+  Calculate the addition of ((VAR,a,INT,1,9)) and ((VAR,b,INT,1,9,2)) and store in
+  ((VARQ,c)).
 
 notes: |+
-  HEADER_NOTES
+  ((HEADER_NOTES))
 
-  c = VARV(a)+VARV(b)
-  VERIFY_VARIABLE(c)
+  c = ((a))+((b))
+  ((VERIFY_VARIABLE,c))
 
 ---
-tags:
-  - product header
-difficulty: 0
+tags:product header
+scaffold:
 description: |+
   ## Products
 ---
@@ -505,16 +555,16 @@ tags:
   - product
 difficulty: 1
 description: |+
-  HEADER
+  ((HEADER))
 
-  Calculate the product VARFLOATRANGE(a,1,5,0.5) and VAROP(b,2.0,5.0,10.0) and store in
-  VARQ(c).
+  Calculate the product ((VAR,a,FLOATRANGE,1,5,0.5) and ((VAR,b,OP,2.0,5.0,10.0)) and store in
+  ((VARQ,c)).
 
 notes: |+
-  HEADER_NOTES
+  ((HEADER_NOTES))
 
-  c = VARV(a)*VARV(b)
-  VERIFY_VARIABLE(c)
+  c = ((a))*((b))
+  ((VERIFY_VARIABLE,c))
 
 ```
 

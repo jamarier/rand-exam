@@ -2,7 +2,7 @@
 Tags processing and search for questions in tags
 """
 
-from typing import Dict, List
+from typing import List
 
 
 def tag_query(tag_str: str) -> List:
