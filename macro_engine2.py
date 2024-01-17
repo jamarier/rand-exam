@@ -112,7 +112,7 @@ def gen_int(min, max) -> str:
     return output
 
 
-def range(min, max, step) -> List:
+def gen_range(min, max, step) -> List:
     """min <= generated << max
     step"""
     options = []
@@ -148,53 +148,55 @@ def register_op(name):
 
 
 @register_op("SAVE")
-def op_SAVE(args, vars: Mapping) -> Tuple[str, Mapping]:
+def op_SAVE(args, vars_storage: Mapping) -> Tuple[str, Mapping]:
     varname = args.pop(0)
     key = args.pop(0)
-    value, vars = run_function(key, *args, vars=vars)
-    vars[varname] = value
+    value, vars_storage = run_function(key, *args, vars_storage=vars_storage)
+    vars_storage[varname] = value
 
-    return ("", vars)
+    return ("", vars_storage)
 
 
 @register_op("VAR")
-def op_VAR(args, vars: Mapping) -> Tuple[str, Mapping]:
+def op_VAR(args, vars_storage: Mapping) -> Tuple[str, Mapping]:
     varname = args.pop(0)
     key = args.pop(0)
-    _, vars = run_function("SAVE", varname, key, *args, vars=vars)
+    _, vars_storage = run_function(
+        "SAVE", varname, key, *args, vars_storage=vars_storage
+    )
 
-    return (f"(({varname}))", vars)
+    return (f"(({varname}))", vars_storage)
 
 
 # random generators
 
 
 @register_op("INT")
-def op_INT(args, vars: Mapping) -> Tuple[str, Mapping]:
+def op_INT(args, vars_storage: Mapping) -> Tuple[str, Mapping]:
     """
     The third arg is the step or 1 if doesn't exist
     """
     args = to_int(args)
     if len(args) == 2:
-        return str(gen_int(*args)), vars
+        return str(gen_int(*args)), vars_storage
     else:
-        return str(gen_op(range(*args))), vars
+        return str(gen_op(gen_range(*args))), vars_storage
 
 
 @register_op("FLOAT")
-def op_FLOAT(args, vars: Mapping) -> Tuple[str, Mapping]:
+def op_FLOAT(args, vars_storage: Mapping) -> Tuple[str, Mapping]:
     """
     FLOAT(min,max,decimals?)
     """
     args = to_float(args)
 
-    return str(gen_float(*args)), vars
+    return str(gen_float(*args)), vars_storage
 
 
-@register_op("FLOATRANGE")
-def op_FLOATRANGE(args, vars: Mapping) -> Tuple[str, Mapping]:
+@register_op("FLOATgen_range")
+def op_FLOATgen_range(args, vars_storage: Mapping) -> Tuple[str, Mapping]:
     """
-    FLOATRANGE(min,max,step,decimals?)
+    FLOATgen_range(min,max,step,decimals?)
     """
     args = to_float(args)
 
@@ -205,32 +207,48 @@ def op_FLOATRANGE(args, vars: Mapping) -> Tuple[str, Mapping]:
     if len(args) == 4:
         decimals = args.pop()
 
-    return f"{gen_op(range(*args)):.{int(decimals)}f}", vars
+    return f"{gen_op(gen_range(*args)):.{int(decimals)}f}", vars_storage
 
 
 @register_op("OP")
-def op_OP(args, vars: Mapping) -> Tuple[str, Mapping]:
-    return gen_op(args), vars
+def op_OP(args, vars_storage: Mapping) -> Tuple[str, Mapping]:
+    return gen_op(args), vars_storage
+
+
+@register_op("OPEXCEPT")
+def op_OPEXCEPT(args, vars_storage: Mapping) -> Tuple[str, Mapping]:
+    num_except = int(args.pop(0))
+    excepts = []
+
+    print("\nnum_except", num_except)
+    print("type", type(num_except))
+
+    for _it in range(num_except):
+        excepts.append(args.pop(0))
+
+    args = [it for it in args if it not in excepts]
+
+    return gen_op(args), vars_storage
 
 
 # format content
 
 
 @register_op("DATE")
-def op_DATE(args, vars: Mapping) -> Tuple[str, Mapping]:
-    return time.strftime("%Y-%m-%d"), vars
+def op_DATE(_args, vars_storage: Mapping) -> Tuple[str, Mapping]:
+    return time.strftime("%Y-%m-%d"), vars_storage
 
 
 @register_op("FOR")
-def op_FOR(args, vars: Mapping) -> Tuple[str, Mapping]:
+def op_FOR(args, vars_storage: Mapping) -> Tuple[str, Mapping]:
     torepeat = args.pop(0)
     times = int(args.pop(0))
 
-    return torepeat * times, vars
+    return torepeat * times, vars_storage
 
 
 @register_op("CASES")
-def op_CASES(args, vars: Mapping) -> Tuple[str, Mapping]:
+def op_CASES(args, vars_storage: Mapping) -> Tuple[str, Mapping]:
     """
     ((CASES,input,match1,value1,match2,value2,...,default))
 
@@ -242,78 +260,95 @@ def op_CASES(args, vars: Mapping) -> Tuple[str, Mapping]:
     while args:
         match_clause = args.pop(0)
         if not args:
-            return match_clause, vars
+            return match_clause, vars_storage
 
         value = args.pop(0)
 
         if tomatch == match_clause:
-            return value, vars
+            return value, vars_storage
 
-    return "", vars
+    return "", vars_storage
 
 
 @register_op("ID")
-def op_ID(args, vars: Mapping) -> Tuple[str, Mapping]:
-    return args.pop(0), vars
+def op_ID(args, vars_storage: Mapping) -> Tuple[str, Mapping]:
+    return args.pop(0), vars_storage
 
 
 # mathematical operations
 
 
 @register_op("CALC")
-def op_CALC(args, vars) -> Tuple[str, Mapping]:
+def op_CALC(args, vars_storage) -> Tuple[str, Mapping]:
+    full_calculation = " ".join(args)
     stack = []
 
-    while args:
-        key = args.pop(0).strip()
+    try:
+        while args:
+            print(f"CALC args: {args}")
+            key = args.pop(0).strip()
 
-        # Variable substitution
-        if key in vars["metadata"]:
-            key = vars["metadata"][key]
-        elif key in vars:
-            key = vars[key]
+            # Variable substitution
+            if key in vars_storage["metadata"]:
+                key = vars_storage["metadata"][key]
+            elif key in vars_storage:
+                key = vars_storage[key]
 
-        # Remove empty operator
-        if key == "":
-            continue
+            # Remove empty operator
+            if key == "":
+                continue
 
-        # Operators
-        if key == "INT":
-            value = stack.pop()
-            stack.append(int(round(value)))  # round to even, then cast
-        elif key == "+":
-            value_b = stack.pop()
-            value_a = stack.pop()
-            stack.append(value_a + value_b)
-        elif key == "-":
-            value_b = stack.pop()
-            value_a = stack.pop()
-            stack.append(value_a - value_b)
-        elif key == "*":
-            value_b = stack.pop()
-            value_a = stack.pop()
-            stack.append(value_a * value_b)
-        elif key == "/":
-            value_b = stack.pop()
-            value_a = stack.pop()
-            stack.append(value_a / value_b)
-        else:
-            stack.append(float(key))
+            # Operators
+            if key == "INT":
+                value = stack.pop()
+                stack.append(int(round(value)))  # round to even, then cast
+            elif key == "ROUND":
+                decimals = int(stack.pop())
+                value = stack.pop()
+                stack.append(round(value, decimals))
+            elif key == "+":
+                value_b = stack.pop()
+                value_a = stack.pop()
+                stack.append(value_a + value_b)
+            elif key == "-":
+                value_b = stack.pop()
+                value_a = stack.pop()
+                stack.append(value_a - value_b)
+            elif key == "*":
+                value_b = stack.pop()
+                value_a = stack.pop()
+                stack.append(value_a * value_b)
+            elif key == "/":
+                value_b = stack.pop()
+                value_a = stack.pop()
+                stack.append(value_a / value_b)
+            else:
+                stack.append(float(key))
+    except IndexError as exc:
+        print(f"\nERROR in CALC -> Args: {full_calculation}")
+        raise IndexError from exc
 
     if len(stack) > 1:
         raise ValueError(f"To much depth in stack: <{stack}>")
 
-    return str(stack[0]), vars
+    return str(stack[0]), vars_storage
 
 
-print("Internal Operations:")
-for name in internal_operations:
-    print(" ", name)
+def print_operations():
+    """
+    Print defined operations
+    """
+    print("Internal Operations:")
+    for it in internal_operations:
+        print(" ", it)
+
+
+print_operations()
 
 
 # --------------------------------------------------------------------
 # Macro engine
-def run_function(key, *args, vars, macros={}) -> Tuple[str, Mapping]:
+def run_function(key, *args, vars_storage, macros={}) -> Tuple[str, Mapping]:
     """
     Execute function "key" with arguments
     """
@@ -322,12 +357,12 @@ def run_function(key, *args, vars, macros={}) -> Tuple[str, Mapping]:
     text = None
 
     # metadata
-    if key in vars["metadata"]:
-        text = str(vars["metadata"][key])
+    if key in vars_storage["metadata"]:
+        text = str(vars_storage["metadata"][key])
 
-    # vars
-    elif key in vars:
-        text = vars[key]
+    # vars_storage
+    elif key in vars_storage:
+        text = vars_storage[key]
 
     # macros
     elif key in macros:
@@ -335,11 +370,11 @@ def run_function(key, *args, vars, macros={}) -> Tuple[str, Mapping]:
 
     # internal functions
     elif key in internal_operations:
-        text, vars = internal_operations[key](list(args), vars)
+        text, vars_storage = internal_operations[key](list(args), vars_storage)
 
     print(text)
 
-    return text, vars
+    return text, vars_storage
 
 
 def load_next_macro(text: str) -> Tuple:
@@ -364,7 +399,7 @@ def load_next_macro(text: str) -> Tuple:
     return (previous, key, args, post)
 
 
-def macro_engine2_single(macros, vars, text) -> str:
+def macro_engine2_single(macros, vars_storage, text) -> str:
     """
      In this engine, the activation of a macro is always in the shape:
          ((name,args,args,...))
@@ -387,25 +422,27 @@ def macro_engine2_single(macros, vars, text) -> str:
     if key == "DNL":
         post = remove_to_nl(post)
         text = previous + post
-        return macro_engine2_single(macros, vars, text)
+        return macro_engine2_single(macros, vars_storage, text)
 
     # execute function in key
-    result, vars = run_function(key, *args, vars=vars, macros=macros)
+    result, vars_storage = run_function(
+        key, *args, vars_storage=vars_storage, macros=macros
+    )
     if result is not None:
         text = previous + result + post
-        return macro_engine2_single(macros, vars, text)
+        return macro_engine2_single(macros, vars_storage, text)
 
     raise ValueError("~~~~~~~~Unknown function", key, args)
 
 
-def macro_engine2(counter, macros, vars, text_d, text_n) -> Tuple[str, str]:
+def macro_engine2(counter, macros, vars_storage, text_d, text_n) -> Tuple[str, str]:
     """
     Second version of the macro engine.
 
     Inputs:
     * counter: current counter
     * macros: macro definitions
-    * Vars defined
+    * vars_storage defined
 
     look for macro_engine2_single for information about the working of the
     engine
@@ -415,8 +452,9 @@ def macro_engine2(counter, macros, vars, text_d, text_n) -> Tuple[str, str]:
     """
 
     # updating data to engine2
-    vars2 = {k: v for k, v in vars.items()}
-    vars2["metadata"]["COUNTER"] = counter
+    # copy to avoid the manipulation of original data in macro_engine2
+    vars_storage2 = dict(vars_storage.items())
+    vars_storage2["metadata"]["COUNTER"] = counter
 
     macros2 = {}
     for it in macros:
@@ -430,14 +468,7 @@ def macro_engine2(counter, macros, vars, text_d, text_n) -> Tuple[str, str]:
         macros2[key] = output
 
     # calling for each part
-    output1 = macro_engine2_single(macros2, vars2, text_d)
-    output2 = macro_engine2_single(macros2, vars2, text_n)
-
-    if "STOP" in output1 or "STOP" in output2:
-        print("----")
-        print(output1)
-        print("---")
-        print(output2)
-        # 0 / 0
+    output1 = macro_engine2_single(macros2, vars_storage2, text_d)
+    output2 = macro_engine2_single(macros2, vars_storage2, text_n)
 
     return (output1, output2)
