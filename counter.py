@@ -60,8 +60,6 @@ class Counter:
             else:
                 self._init_dict(structure, questions)
 
-        self.taken = self.min
-
     def _init_int(self, structure: int):
         """
         Init Counter if the content is a int
@@ -253,7 +251,7 @@ and I do not know how to do it.
         self.min = max(self.min, other.min)
         self.max = min(self.max, other.max)
 
-        self.taken = self.min
+        self.taken = min(self.taken, other.taken)
 
         if self.max < self.min:
             raise ValueError(
@@ -299,6 +297,12 @@ an empty range was obtained
 
         return "\n".join(output)
 
+    def have_to_grow(self) -> bool:
+        """
+        Inform if the counter have to increase its taken value because is less than minimum
+        """
+        return self.taken < self.min
+
     def can_grow(self) -> bool:
         """
         Inform if the counter can increase its value
@@ -343,6 +347,15 @@ an empty range was obtained
         self.taken += 1
 
         if self.bank:
+            return
+
+        # locate have to grow
+        haveto = [
+            pos for (pos, counter) in enumerate(self.children) if counter.have_to_grow()
+        ]
+        if haveto:
+            to_grow = haveto.pop()
+            self.children[to_grow].increment_question()
             return
 
         # locate growable children
