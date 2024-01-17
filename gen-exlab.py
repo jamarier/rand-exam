@@ -142,19 +142,23 @@ def inner_load_questions(input_path: Path, accumulated: List) -> List:
                     question["scaffold"] = False
 
                 # compulsory keys
-                check_compulsory(question, ["description", "difficulty"])
+                check_compulsory(question, ["description"])
                 question = check_description(question)
 
                 # default values
                 question["notes"] = question.get("notes", None)
+                question["difficulty"] = question.get("difficulty", 1)
                 question["frequency"] = question.get("frequency", 1)
-                question["title"] = question.get("title", question["description"][0:80])
+                question["title"] = question.get(
+                    "title", question["description"][0:80])
                 question["autotag"] = question.get("autotag", True)
-                # regex key must to be the last because can use info of other keys and values
-                question["regex"] = resolve_auto_regex(question)
 
                 # tags archiving
                 question["tags"] = load_tags(question, input_path.stem)
+
+                # regex key must to be the last because can
+                # resolve_auto_regex use info of other keys and values
+                question["regex"] = resolve_auto_regex(question)
 
                 accumulated.append(question)
 
@@ -188,7 +192,8 @@ def estimated_difficulty_tag(questions) -> float:
     for question in questions:
         print("question", question)
         if question["difficulty"] is None or question["frequency"] is None:
-            print(f'question: {question["title"]} has no frequency or difficulty')
+            print(
+                f'question: {question["title"]} has no frequency or difficulty')
             continue
 
         sum_numerator += question["difficulty"] * question["frequency"]
@@ -202,8 +207,6 @@ def random_question(questions, num_questions) -> List:
     questions: bank of questions (for certain part)
     num_questions: number of questions to extract
     """
-
-    print("  en random_question, num_questions", num_questions)
 
     # in case all questions asked
     if len(questions) == num_questions:
@@ -229,7 +232,8 @@ def random_question_more(questions, num_questions) -> List:
 
     new_possible_questions = [it for it in questions if it is not one_question]
 
-    output.extend(random_question_more(new_possible_questions, num_questions - 1))
+    output.extend(random_question_more(
+        new_possible_questions, num_questions - 1))
 
     return output
 
@@ -365,8 +369,10 @@ def estimated_difficulty_exam(exam, selected_questions) -> float:
     print(selected_questions)
 
     for part, questions in zip(exam["parts"], selected_questions):
-        difficulty[0] += estimated_difficulty_tag(questions) * part["num_questions"][0]
-        difficulty[1] += estimated_difficulty_tag(questions) * part["num_questions"][1]
+        difficulty[0] += estimated_difficulty_tag(
+            questions) * part["num_questions"][0]
+        difficulty[1] += estimated_difficulty_tag(
+            questions) * part["num_questions"][1]
 
     return difficulty
 
@@ -381,6 +387,8 @@ def random_exam_item(exam):
 
     num_of_questions = random.randint(parts.min, parts.max)
     parts.update_taken_questions(num_of_questions)
+    print(label("after count finished"))
+    print(parts)
 
     possible_exam = random_exam_item_recurse(parts)
 
@@ -399,7 +407,6 @@ def random_exam_item_recurse(part):
         for child in part.children:
             output.extend(random_exam_item_recurse(child))
     else:  # part.bank
-        print("taken", part.taken)
         output.extend(random_question(part.bank, part.taken))
 
     return output
@@ -461,8 +468,10 @@ def gen_filenames(exam, counter):
     filename2 = Path(exam["file_notes"])
 
     if counter:
-        file1 = filename1.parent / (filename1.stem + f"_{counter}" + filename1.suffix)
-        file2 = filename2.parent / (filename2.stem + f"_{counter}" + filename2.suffix)
+        file1 = filename1.parent / \
+            (filename1.stem + f"_{counter}" + filename1.suffix)
+        file2 = filename2.parent / \
+            (filename2.stem + f"_{counter}" + filename2.suffix)
         return (file1, file2)
 
     # counter == 0
@@ -523,7 +532,8 @@ def render_exam(exam, filenames, exam_instance):
             # functions
             if question["regex"]:
                 text_d, text_n = macro_engine2(
-                    counter, exam["macros"], {"metadata": question}, text_d, text_n
+                    counter, exam["macros"], {
+                        "metadata": question}, text_d, text_n
                 )
 
             if not question["scaffold"]:
@@ -586,7 +596,8 @@ def main(
         ),
     ],
     bank_dir: Annotated[
-        Optional[Path], typer.Option("--bank", "-b", help="Questions to choose from")
+        Optional[Path], typer.Option(
+            "--bank", "-b", help="Questions to choose from")
     ] = None,
     edition: Annotated[
         Optional[int],
@@ -598,10 +609,12 @@ def main(
         Optional[int], typer.Option("--seed", "-s", help="Seed used")
     ] = None,
     tries: Annotated[
-        int, typer.Option("--tries", "-a", help="Number of tries to generate exam")
+        int, typer.Option(
+            "--tries", "-a", help="Number of tries to generate exam")
     ] = None,
     tolerance: Annotated[
-        float, typer.Option("--tolerance", "-t", help="Tolerance to select exam")
+        float, typer.Option("--tolerance", "-t",
+                            help="Tolerance to select exam")
     ] = None,
 ):
     print("index_file", index_file)
