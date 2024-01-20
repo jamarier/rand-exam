@@ -400,23 +400,46 @@ def load_next_macro(text: str) -> Tuple:
 
 
 def macro_engine2_single(macros, vars_storage, text) -> str:
-    """
+    r"""
      In this engine, the activation of a macro is always in the shape:
          ((name,args,args,...))
 
-     Double parenteses and a list split with commas.
+     Double parentheses and a list split with commas.
 
      They are processes from begining to end from inside to outside, so
      ((1,((2)),((3)),)) ((4,((5))))
 
     The order to resolve: 2, 3, 1, 5, 4
 
-     (To avoid to parse)
+     (To avoid to parse it is possible to escape some chars:
+      "\\" -> "\" two bars -> one bar
+      "\(" -> "(" bar + open parentheses -> open parentheses
+      "\)" -> ")" bar + close parentheses -> close parentheses
+
+      So "(\(DATE)\)" -> "((DATE))" without calling the function
+
+      the close parentheses is not always required. depend on the context
 
     """
     previous, key, args, post = load_next_macro(text)
     if not key:
-        return previous
+        # unscaping
+        output = ""
+        scape = False
+        for char in previous:
+            if scape:
+                if char in "\\()":
+                    output += char
+                else:
+                    output += f"\\{char}"
+                scape = False
+            else:
+                if char == "\\":
+                    scape = True
+                else:
+                    output += char
+
+        return output
 
     # DNL, remove from macro invocation to newline inclusive
     if key == "DNL":
@@ -435,7 +458,7 @@ def macro_engine2_single(macros, vars_storage, text) -> str:
     raise ValueError("~~~~~~~~Unknown function", key, args)
 
 
-def macro_engine2(counter, macros, vars_storage, text_d, text_n) -> Tuple[str, str]:
+def macro_engine2(counter, macros, vars_storage, texts) -> List[str]:
     """
     Second version of the macro engine.
 
@@ -444,13 +467,14 @@ def macro_engine2(counter, macros, vars_storage, text_d, text_n) -> Tuple[str, s
     * macros: macro definitions
     * vars_storage defined
 
+    * list of texts to process with same macro and vars definitions
+
     look for macro_engine2_single for information about the working of the
     engine
 
-    First is procesed text_d and then text_n
-
     """
 
+    output_texts = []
     # updating data to engine2
     # copy to avoid the manipulation of original data in macro_engine2
     vars_storage2 = dict(vars_storage.items())
@@ -468,7 +492,7 @@ def macro_engine2(counter, macros, vars_storage, text_d, text_n) -> Tuple[str, s
         macros2[key] = output
 
     # calling for each part
-    output1 = macro_engine2_single(macros2, vars_storage2, text_d)
-    output2 = macro_engine2_single(macros2, vars_storage2, text_n)
+    for text in texts:
+        output_texts.append(macro_engine2_single(macros2, vars_storage2, text))
 
-    return (output1, output2)
+    return output_texts

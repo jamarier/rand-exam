@@ -575,3 +575,8 @@ notes: |+
   different values) several times to make drillout exercises (to
   practice).
 
+* ESCAPE OF PARENTHESES (\(DATE))
+
+* question[regex] is deleted
+
+* multiple files

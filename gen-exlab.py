@@ -46,30 +46,13 @@ def label(text):
 # QUESTIONS
 
 
-def resolve_auto_regex(question) -> bool:
+def check_field(field, question) -> Dict:
     """
-    Read regex value in question and resolve true/false if the value is auto.
+    If the field doesn't exist it is marked in debug mesage
     """
-    output = question.get("regex", "auto")
 
-    if output == "auto":
-        output = "((" in question["description"] or (
-            question["notes"] is not None and "((" in question["notes"]
-        )
-
-    return output
-
-
-def check_description(question) -> Dict:
-    """
-    Check the existence of description
-    """
-    if "description" not in question:
-        print(f' question "{question}" has no key: "description"')
-        raise typer.Exit(3)
-
-    if question["description"] is None:
-        question["description"] = "((COUNTER)): No description - DEBUG\n"
+    if field not in question or question[field] is None:
+        question[field] = f"((COUNTER)): No {field} - DEBUG\n"
 
     return question
 
@@ -86,7 +69,7 @@ def check_compulsory(question, keys):
 
 def load_tags(question, filestem):
     """
-    Load tags of question and add filestem and all (if it is regex)
+    Load tags of question and add filestem and all (if it is autotag)
     """
 
     tags = set()
@@ -141,24 +124,13 @@ def inner_load_questions(input_path: Path, accumulated: List) -> List:
                 else:
                     question["scaffold"] = False
 
-                # compulsory keys
-                check_compulsory(question, ["description"])
-                question = check_description(question)
-
                 # default values
-                question["notes"] = question.get("notes", None)
                 question["difficulty"] = question.get("difficulty", 1)
                 question["frequency"] = question.get("frequency", 1)
-                question["title"] = question.get(
-                    "title", question["description"][0:80])
                 question["autotag"] = question.get("autotag", True)
 
                 # tags archiving
                 question["tags"] = load_tags(question, input_path.stem)
-
-                # regex key must to be the last because can
-                # resolve_auto_regex use info of other keys and values
-                question["regex"] = resolve_auto_regex(question)
 
                 accumulated.append(question)
 
@@ -192,8 +164,7 @@ def estimated_difficulty_tag(questions) -> float:
     for question in questions:
         print("question", question)
         if question["difficulty"] is None or question["frequency"] is None:
-            print(
-                f'question: {question["title"]} has no frequency or difficulty')
+            print(f"question: {question} has no frequency or difficulty")
             continue
 
         sum_numerator += question["difficulty"] * question["frequency"]
@@ -232,8 +203,7 @@ def random_question_more(questions, num_questions) -> List:
 
     new_possible_questions = [it for it in questions if it is not one_question]
 
-    output.extend(random_question_more(
-        new_possible_questions, num_questions - 1))
+    output.extend(random_question_more(new_possible_questions, num_questions - 1))
 
     return output
 
@@ -279,15 +249,11 @@ def difficulty_list(questions) -> float:
 # EXAM
 
 
-def load_exam(exam_file: Path) -> Dict:
+def default_values(exam):
     """
-    Load exam description (not the questions)
+    Define default values for parameters in index file
+    Value of exam pased by reference (modified here)
     """
-    header("Loading exam")
-
-    with exam_file.open("r") as fh:
-        exam = yaml.safe_load(fh)
-
     # bank loading
     if "bank" not in exam:
         exam["bank"] = None
@@ -305,6 +271,12 @@ def load_exam(exam_file: Path) -> Dict:
     if "tolerance" not in exam:
         exam["tolerance"] = 0.5
 
+
+def load_macros(exam):
+    """
+    Load macros from index file
+    Value of exam pased by reference (modified here)
+    """
     # loading macros
     if "macros" not in exam:
         exam["macros"] = []
@@ -325,10 +297,52 @@ def load_exam(exam_file: Path) -> Dict:
 
         exam["macros"] = nmacros
 
-    # description and notes (apply macros)
-    exam["description"], exam["notes"] = macro_engine2(
-        0, exam["macros"], {"metadata": {}}, exam["description"], exam["notes"]
-    )
+
+def load_output_files(exam):
+    """
+    Load the names of the output files in exam
+    Value of exam pased by reference (modified here)
+    """
+
+    if "files" not in exam:
+        print("files field not in exam")
+        raise ValueError(f"files field not in exam: {exam.keys()}")
+
+    # check forbiden names
+    forbidden_names = [
+        "scaffold",
+        "difficulty",
+        "autotag",
+        "frequency",
+        "tags",
+    ]
+
+    # Checking valid files and headers and footers of files
+    files_id = []
+    for file in exam["files"]:
+        file_id = Path(file).stem
+
+        if file_id in forbidden_names:
+            print(f"file field <{file}> forbidden")
+            raise ValueError("field forbidden)")
+
+        files_id.append(file_id)
+
+    exam["files_id"] = files_id
+
+
+def load_exam(exam_file: Path) -> Dict:
+    """
+    Load exam description (not the questions)
+    """
+    header("Loading exam")
+
+    with exam_file.open("r") as fh:
+        exam = yaml.safe_load(fh)
+
+    default_values(exam)
+    load_macros(exam)
+    # load_output_files(exam)
 
     return exam
 
@@ -369,10 +383,8 @@ def estimated_difficulty_exam(exam, selected_questions) -> float:
     print(selected_questions)
 
     for part, questions in zip(exam["parts"], selected_questions):
-        difficulty[0] += estimated_difficulty_tag(
-            questions) * part["num_questions"][0]
-        difficulty[1] += estimated_difficulty_tag(
-            questions) * part["num_questions"][1]
+        difficulty[0] += estimated_difficulty_tag(questions) * part["num_questions"][0]
+        difficulty[1] += estimated_difficulty_tag(questions) * part["num_questions"][1]
 
     return difficulty
 
@@ -463,22 +475,42 @@ def random_exam(exam):
 # MACRO ENGINE
 
 
-def gen_filenames(exam, counter):
-    filename1 = Path(exam["file_descriptions"])
-    filename2 = Path(exam["file_notes"])
+def gen_fileid(exam):
+    """
+    Extract file_id from files key of exam
 
-    if counter:
-        file1 = filename1.parent / \
-            (filename1.stem + f"_{counter}" + filename1.suffix)
-        file2 = filename2.parent / \
-            (filename2.stem + f"_{counter}" + filename2.suffix)
-        return (file1, file2)
+    return list with same order than files
+    """
 
-    # counter == 0
-    return (filename1, filename2)
+    return [Path(it).stem for it in exam["files"]]
 
 
-def locate_empty_filename(exam):
+def gen_filenames(index_file, exam, counter):
+    """
+    Generate a list of filenames in function of index_file, exam["files"] and counter
+    """
+    filenames = []
+    base_filename = index_file.parent / index_file.stem
+
+    for file_output in exam["files"]:
+        name = Path(file_output)
+        suffix = name.suffix
+        name = name.stem
+
+        if counter:
+            filenames.append(
+                base_filename.parent
+                / (base_filename.stem + f"_{name}_{counter}" + suffix)
+            )
+        else:
+            filenames.append(
+                base_filename.parent / (base_filename.stem + f"_{name}" + suffix)
+            )
+
+    return filenames
+
+
+def locate_empty_filename(index_file, exam):
     """
     Look for the first edition not generated yet.
 
@@ -486,22 +518,31 @@ def locate_empty_filename(exam):
     """
     counter = 0
 
-    file1, file2 = gen_filenames(exam, counter)
+    searching = True
+    while searching:
+        searching = False
 
-    print("Testing existence of:", file1, file2)
-    while file1.exists() or file2.exists():
+        files = gen_filenames(index_file, exam, counter)
+        print("Testing existence of:", files)
+
+        for file in files:
+            if file.exists():
+                searching = True
+                break
+
+        if not searching:
+            break
+
         counter += 1
-        file1, file2 = gen_filenames(exam, counter)
-        print("testing", file1, file2)
 
-    return (file1, file2), counter
+    return files, counter
 
 
 # --------------------------------------------------------------------
 # Render
 
 
-def render_exam(exam, filenames, exam_instance):
+def render_exam(exam, exam_instance):
     """
     Create the output filename of description and notes.
 
@@ -509,40 +550,57 @@ def render_exam(exam, filenames, exam_instance):
     """
     header("Rendering")
 
-    filename_description, filename_notes = filenames
-
     counter = 1
+    print(exam.keys())
+    print(exam["files_id"])
+    print(exam["filenames"])
 
-    with filename_description.open("w") as fh_d, filename_notes.open("w") as fh_n:
-        if "description" in exam:
-            text_d = exam["description"]
-            fh_d.write(text_d + "\n")
+    output_texts = {it: "" for it in exam["files_id"]}
 
-        if "notes" in exam:
-            text_n = exam["notes"]
-            fh_n.write(text_n + "\n")
+    # headers
+    inputs = []
+    for fid in exam["files_id"]:
+        if f"begin_{fid}" in exam:
+            inputs.append(exam[f"begin_{fid}"])
+        else:
+            inputs.append("")
+    outputs = macro_engine2(0, exam["macros"], {"metadata": {}}, inputs)
+    for index, content in zip(exam["files_id"], outputs):
+        output_texts[index] += content
 
-        for question in exam_instance:
-            header("question")
-            print(question["title"])
+    # questions
+    for question in exam_instance:
+        label("question")
+        print(question)
+        inputs = []
+        for fid in exam["files_id"]:
+            question = check_field(fid, question)
+            inputs.append(question[fid])
 
-            text_d = question["description"]
-            text_n = question["notes"] if question["notes"] else ""
+        outputs = macro_engine2(counter, exam["macros"], {"metadata": question}, inputs)
+        for index, content in zip(exam["files_id"], outputs):
+            output_texts[index] += content
 
-            # functions
-            if question["regex"]:
-                text_d, text_n = macro_engine2(
-                    counter, exam["macros"], {
-                        "metadata": question}, text_d, text_n
-                )
+        if not question["scaffold"]:
+            counter += 1
 
-            if not question["scaffold"]:
-                counter += 1
+    # footer
+    inputs = []
+    for fid in exam["files_id"]:
+        if f"end_{fid}" in exam:
+            inputs.append(exam[f"end_{fid}"])
+        else:
+            inputs.append("")
+    outputs = macro_engine2(0, exam["macros"], {"metadata": {}}, inputs)
+    for index, content in zip(exam["files_id"], outputs):
+        output_texts[index] += content
 
-            fh_d.write(text_d + "\n")
-            fh_n.write(text_n + "\n")
-
-    label(f"Generated {filename_description} and {filename_notes}")
+    # writing to the files
+    header("Writing the files")
+    for file_id, filename in zip(exam["files_id"], exam["filenames"]):
+        print("Save of", filename)
+        with filename.open("w") as fh:
+            fh.write(output_texts[file_id] + "\n")
 
 
 # --------------------------------------------------------------------
@@ -557,9 +615,9 @@ difficulty: 0
 file_descriptions: catalogue.md
 file_notes: catalogue.m
 macros:
-  - HEADER: |+
+  - ((HEADER)): |+
       ((COUNTER)) Dif. ((FOR,*,((difficulty)))) Frec. ((frequency))
-  - HEADER_NOTES: "((COUNTER))\n"
+  - ((HEADER_NOTES)): "((COUNTER))\n"
 description: |+
   ---
   geometry: margin=4cm
@@ -570,12 +628,11 @@ notes: |+
   ((comment))
 parts:
   - instrucciones
-  - Parte Señal
-  - Sesión 1
-  - {tag: 'sesion1',num_questions: -1}
-  - Sesión 2
-  - {tag: 'sesion2',num_questions: -1}
-  - Sesión 3
+  - Parte Señal .
+  - Sesión 1 . 
+  - sesion1: -1
+  - Sesión 2 .
+  - sesion2: -1
 """
 
     if index_file.exists():
@@ -596,8 +653,7 @@ def main(
         ),
     ],
     bank_dir: Annotated[
-        Optional[Path], typer.Option(
-            "--bank", "-b", help="Questions to choose from")
+        Optional[Path], typer.Option("--bank", "-b", help="Questions to choose from")
     ] = None,
     edition: Annotated[
         Optional[int],
@@ -609,17 +665,16 @@ def main(
         Optional[int], typer.Option("--seed", "-s", help="Seed used")
     ] = None,
     tries: Annotated[
-        int, typer.Option(
-            "--tries", "-a", help="Number of tries to generate exam")
+        int, typer.Option("--tries", "-a", help="Number of tries to generate exam")
     ] = None,
     tolerance: Annotated[
-        float, typer.Option("--tolerance", "-t",
-                            help="Tolerance to select exam")
+        float, typer.Option("--tolerance", "-t", help="Tolerance to select exam")
     ] = None,
 ):
     print("index_file", index_file)
     if not index_file.exists():
         create_index_file(index_file)
+        print("index file created: but it is obsolete. You have to retouch")
         return
 
     exam = load_exam(index_file)
@@ -638,13 +693,19 @@ def main(
     if exam["bank"] is None:
         raise ValueError("No bank dir in index_file or CLI options")
 
-    # Edition
+    # Filenames + Edition
+    header("Output filenames")
     if edition is None:
-        filenames, edition = locate_empty_filename(exam)
+        filenames, edition = locate_empty_filename(index_file, exam)
     else:
-        filenames = gen_filenames(exam, edition)
+        filenames = gen_filenames(index_file, exam, edition)
+    print("  filenames", filenames)
+    exam["filenames"] = filenames
+    exam["files_id"] = gen_fileid(exam)
 
-    random.seed(exam["seed"] + edition)
+    exam["edition"] = edition
+
+    random.seed(exam["seed"] + exam["edition"])
 
     # reading questions
     questions = load_questions(exam["bank"])
@@ -667,7 +728,7 @@ def main(
     print("exam wished difficulty", exam["difficulty"])
     print("real difficulty", difficulty_list(exam_instance))
 
-    render_exam(exam, filenames, exam_instance)
+    render_exam(exam, exam_instance)
 
 
 if __name__ == "__main__":
