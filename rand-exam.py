@@ -52,7 +52,7 @@ def check_field(field, question) -> Dict:
     """
 
     if field not in question or question[field] is None:
-        question[field] = f"((COUNTER)): No {field} - DEBUG\n"
+        question[field] = f"\n((COUNTER)): No {field} - DEBUG\n\n"
 
     return question
 
@@ -203,7 +203,8 @@ def random_question_more(questions, num_questions) -> List:
 
     new_possible_questions = [it for it in questions if it is not one_question]
 
-    output.extend(random_question_more(new_possible_questions, num_questions - 1))
+    output.extend(random_question_more(
+        new_possible_questions, num_questions - 1))
 
     return output
 
@@ -383,8 +384,10 @@ def estimated_difficulty_exam(exam, selected_questions) -> float:
     print(selected_questions)
 
     for part, questions in zip(exam["parts"], selected_questions):
-        difficulty[0] += estimated_difficulty_tag(questions) * part["num_questions"][0]
-        difficulty[1] += estimated_difficulty_tag(questions) * part["num_questions"][1]
+        difficulty[0] += estimated_difficulty_tag(
+            questions) * part["num_questions"][0]
+        difficulty[1] += estimated_difficulty_tag(
+            questions) * part["num_questions"][1]
 
     return difficulty
 
@@ -504,7 +507,8 @@ def gen_filenames(index_file, exam, counter):
             )
         else:
             filenames.append(
-                base_filename.parent / (base_filename.stem + f"_{name}" + suffix)
+                base_filename.parent /
+                (base_filename.stem + f"_{name}" + suffix)
             )
 
     return filenames
@@ -577,7 +581,8 @@ def render_exam(exam, exam_instance):
             question = check_field(fid, question)
             inputs.append(question[fid])
 
-        outputs = macro_engine2(counter, exam["macros"], {"metadata": question}, inputs)
+        outputs = macro_engine2(counter, exam["macros"], {
+                                "metadata": question}, inputs)
         for index, content in zip(exam["files_id"], outputs):
             output_texts[index] += content
 
@@ -653,7 +658,8 @@ def main(
         ),
     ],
     bank_dir: Annotated[
-        Optional[Path], typer.Option("--bank", "-b", help="Questions to choose from")
+        Optional[Path], typer.Option(
+            "--bank", "-b", help="Questions to choose from")
     ] = None,
     edition: Annotated[
         Optional[int],
@@ -665,10 +671,12 @@ def main(
         Optional[int], typer.Option("--seed", "-s", help="Seed used")
     ] = None,
     tries: Annotated[
-        int, typer.Option("--tries", "-a", help="Number of tries to generate exam")
+        int, typer.Option(
+            "--tries", "-a", help="Number of tries to generate exam")
     ] = None,
     tolerance: Annotated[
-        float, typer.Option("--tolerance", "-t", help="Tolerance to select exam")
+        float, typer.Option("--tolerance", "-t",
+                            help="Tolerance to select exam")
     ] = None,
 ):
     print("index_file", index_file)
