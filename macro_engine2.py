@@ -18,7 +18,7 @@ def locate_macro(text: str) -> Tuple[str, str, str]:
         return (text, "", "")
 
     previous = text[: start1.start()]
-    following = text[start1.end() :]
+    following = text[start1.end():]
 
     start2 = start_pattern.search(following)
     end2 = end_pattern.search(following)
@@ -33,7 +33,7 @@ def locate_macro(text: str) -> Tuple[str, str, str]:
     # end2.start() < start2.start()
     # or start2 is None
     macro = following[: end2.start()]
-    post = following[end2.end() :]
+    post = following[end2.end():]
     return (previous, macro, post)
 
 
@@ -46,7 +46,7 @@ def remove_to_nl(text: str) -> str:
     if pos < 0:
         return ""
 
-    return text[pos + 1 :]
+    return text[pos + 1:]
 
 
 def apply_macro_user(macro, args) -> str:
@@ -458,7 +458,7 @@ def macro_engine2_single(macros, vars_storage, text) -> str:
     raise ValueError("~~~~~~~~Unknown function", key, args)
 
 
-def macro_engine2(counter, macros, vars_storage, texts) -> List[str]:
+def macro_engine2(counter, macros, vars_storage, files_id, texts) -> List[str]:
     """
     Second version of the macro engine.
 
@@ -492,7 +492,8 @@ def macro_engine2(counter, macros, vars_storage, texts) -> List[str]:
         macros2[key] = output
 
     # calling for each part
-    for text in texts:
+    for file_id, text in zip(files_id, texts):
+        vars_storage2["metadata"]["FILE"] = file_id
         output_texts.append(macro_engine2_single(macros2, vars_storage2, text))
 
     return output_texts

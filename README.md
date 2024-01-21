@@ -575,8 +575,11 @@ notes: |+
   different values) several times to make drillout exercises (to
   practice).
 
-* ESCAPE OF PARENTHESES (\(DATE))
+* Document:
+    * ESCAPE OF PARENTHESES (\(DATE))
 
-* question[regex] is deleted
+    * question[regex] is deleted
 
-* multiple files
+    * multiple files
+
+    * command FILE to identify current file

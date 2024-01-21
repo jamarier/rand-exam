@@ -568,7 +568,9 @@ def render_exam(exam, exam_instance):
             inputs.append(exam[f"begin_{fid}"])
         else:
             inputs.append("")
-    outputs = macro_engine2(0, exam["macros"], {"metadata": {}}, inputs)
+    outputs = macro_engine2(
+        0, exam["macros"], {"metadata": {}}, exam["files_id"], inputs
+    )
     for index, content in zip(exam["files_id"], outputs):
         output_texts[index] += content
 
@@ -581,8 +583,10 @@ def render_exam(exam, exam_instance):
             question = check_field(fid, question)
             inputs.append(question[fid])
 
-        outputs = macro_engine2(counter, exam["macros"], {
-                                "metadata": question}, inputs)
+        outputs = macro_engine2(
+            counter, exam["macros"], {
+                "metadata": question}, exam["files_id"], inputs
+        )
         for index, content in zip(exam["files_id"], outputs):
             output_texts[index] += content
 
@@ -596,7 +600,9 @@ def render_exam(exam, exam_instance):
             inputs.append(exam[f"end_{fid}"])
         else:
             inputs.append("")
-    outputs = macro_engine2(0, exam["macros"], {"metadata": {}}, inputs)
+    outputs = macro_engine2(
+        0, exam["macros"], {"metadata": {}}, exam["files_id"], inputs
+    )
     for index, content in zip(exam["files_id"], outputs):
         output_texts[index] += content
 
