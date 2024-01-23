@@ -272,10 +272,27 @@ def op_CASES(args, vars_storage: Mapping) -> Tuple[str, Mapping]:
 
 @register_op("ID")
 def op_ID(args, vars_storage: Mapping) -> Tuple[str, Mapping]:
+    """
+    Return the first argument without modification.
+
+    Usefull when a operator requires a macro (SAVE, VAR) but you
+    want to insert a literal
+    """
     return args.pop(0), vars_storage
 
 
-# mathematical operations
+@register_op("QUOTECOMMA")
+def op_QUOTECOMMA(args, vars_storage: Mapping) -> Tuple[str, Mapping]:
+    r"""
+    Look for all the commas inside the arg and escape them.
+    ((QUOTECOMMA,1,2,3,4)) -> "1\,2\,3\,4"
+
+    In reality, join all the arguments with "\," as separator
+    """
+
+    return r"\,".join(args), vars_storage
+
+    # mathematical operations
 
 
 @register_op("CALC")

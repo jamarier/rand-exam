@@ -586,6 +586,7 @@ notes: |+
 
 * Document:
     * ESCAPE OF PARENTHESES (\(DATE)) and COMMA
+    * QUOTECOMMA
 
     * question[regex] is deleted
 
