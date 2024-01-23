@@ -18,7 +18,7 @@ def locate_macro(text: str) -> Tuple[str, str, str]:
         return (text, "", "")
 
     previous = text[: start1.start()]
-    following = text[start1.end():]
+    following = text[start1.end() :]
 
     start2 = start_pattern.search(following)
     end2 = end_pattern.search(following)
@@ -33,7 +33,7 @@ def locate_macro(text: str) -> Tuple[str, str, str]:
     # end2.start() < start2.start()
     # or start2 is None
     macro = following[: end2.start()]
-    post = following[end2.end():]
+    post = following[end2.end() :]
     return (previous, macro, post)
 
 
@@ -46,7 +46,7 @@ def remove_to_nl(text: str) -> str:
     if pos < 0:
         return ""
 
-    return text[pos + 1:]
+    return text[pos + 1 :]
 
 
 def apply_macro_user(macro, args) -> str:
@@ -381,6 +381,8 @@ def load_next_macro(text: str) -> Tuple:
     """
     Load next macro and return a tuple with all elements to process
 
+    if the text has "\\,", the comma isn't used as split of args
+
     Return values: (previous, macro_name, args, post)
     where:
         previous: all the text before de macro
@@ -394,6 +396,20 @@ def load_next_macro(text: str) -> Tuple:
         return (previous, "", [], "")
 
     args = macro.split(",")
+
+    # escape of comma
+    nargs = []
+    escaped_comma = False
+    for arg in args:
+        if escaped_comma:
+            nargs[-1] = nargs[-1][0:-1] + ","
+            nargs[-1] += arg
+        else:
+            nargs.append(arg)
+
+        escaped_comma = arg[-1] == "\\"
+    args = nargs
+
     key = args.pop(0)
 
     return (previous, key, args, post)
@@ -428,7 +444,7 @@ def macro_engine2_single(macros, vars_storage, text) -> str:
         scape = False
         for char in previous:
             if scape:
-                if char in "\\()":
+                if char in "\\(),":
                     output += char
                 else:
                     output += f"\\{char}"

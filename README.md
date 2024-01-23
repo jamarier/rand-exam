@@ -575,8 +575,17 @@ notes: |+
   different values) several times to make drillout exercises (to
   practice).
 
+* Include of the content of other file:
+      one: |+
+        ((VAR,F,INT,1,1000))
+      two: |+
+        ((one)). ((F)) is a great number
+
+    in one appear a random int, and in two appear another random, because ((one)) is included in two before one is processed
+    Maybe, when processed one: substitute one by the processed values, but keep created variables to keep the value of F: 
+
 * Document:
-    * ESCAPE OF PARENTHESES (\(DATE))
+    * ESCAPE OF PARENTHESES (\(DATE)) and COMMA
 
     * question[regex] is deleted
 
