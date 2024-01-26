@@ -575,14 +575,22 @@ notes: |+
   different values) several times to make drillout exercises (to
   practice).
 
-* Include of the content of other file:
-      one: |+
-        ((VAR,F,INT,1,1000))
-      two: |+
-        ((one)). ((F)) is a great number
+* content of files are cache: unprocessed (f"{file_id}_raw") and processed(f"{file_id}").
+  This solve: 
+    * Include of the content of other file:
+          one: |+
+            ((VAR,F,INT,1,1000))
+          two: |+
+            ((one)). ((F)) is a great number
 
-    in one appear a random int, and in two appear another random, because ((one)) is included in two before one is processed
-    Maybe, when processed one: substitute one by the processed values, but keep created variables to keep the value of F: 
+        in one appear a random int, and in two appear another random, because ((one)) is included in two before one is processed
+        Maybe, when processed one: substitute one by the processed values, but keep created variables to keep the value of F: 
+    * recursive calls if a command is created with different values per file_id:
+        ((BEGIN)): ((BEGIN_((FILE))))
+        ((BEGIN_one)): one
+        ((BEGIN_two)): ((one))
+        one is processed and cached, so if a ((BEGIN)) is in one, the result is the call to ((BEGIN_one)). 
+        in two, the one is the processed and cache valued, so isn't recalculated. 
 
 * Document:
     * ESCAPE OF PARENTHESES (\(DATE)) and COMMA

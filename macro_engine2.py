@@ -527,6 +527,15 @@ def macro_engine2(counter, macros, vars_storage, files_id, texts) -> List[str]:
     # calling for each part
     for file_id, text in zip(files_id, texts):
         vars_storage2["metadata"]["FILE"] = file_id
-        output_texts.append(macro_engine2_single(macros2, vars_storage2, text))
+        # cache of the original text un processed
+        if file_id in vars_storage2["metadata"]:
+            vars_storage2["metadata"][f"{file_id}_raw"] = vars_storage2["metadata"][
+                file_id
+            ]
+        # cache of processed text
+        vars_storage2["metadata"][file_id] = macro_engine2_single(
+            macros2, vars_storage2, text
+        )
+        output_texts.append(vars_storage2["metadata"][file_id])
 
     return output_texts
