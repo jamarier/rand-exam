@@ -96,6 +96,7 @@ def inner_load_questions(input_path: Path, accumulated: List) -> List:
     """
     print(f"loading {input_path}")
     if input_path.is_dir():
+        print("is a dir")
         for subinput in input_path.glob("*"):
             accumulated = inner_load_questions(subinput, accumulated)
     elif input_path.suffix in (".yaml", ".yml"):
@@ -143,6 +144,7 @@ def load_questions(bank_dir: Path) -> List:
     """
     header("Loading questions")
     questions = inner_load_questions(bank_dir, [])
+    assert len(questions)>0, "No questions in bank"
 
     return questions
 

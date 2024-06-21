@@ -1,0 +1,170 @@
+---
+tags:
+  - test
+  - señal
+alumno: |+
+  ((BEGIN))
+  Un secuencia coseno discreto es periódico si y sólo si:
+
+  ((TEST4((DNL))
+  ,La frecuencia es un número racional((DNL))
+  ,La fase es un número racional((DNL))
+  ,La frecuencia es un número entero((DNL))
+  ,La frecuencia es un número racional positivo((DNL))
+  ))
+    
+  ((END))
+profesor: |+
+  ((BEGIN))
+  ((ANSWER))
+  ((END))
+---
+tags:
+  - test
+  - señal
+alumno: |+
+  ((BEGIN))
+  El aliasing supone que:
+
+  ((TEST4((DNL))
+  ,Tras el muestro de 2 señales con frecuencias diferentes se obtiene 2 secuencias que oscilan a la misma velocidad.((DNL))
+  ,El error de cuantificación es de demasiado grande debido a que el número bits empleados es pequeño.((DNL))
+  ,Se cumple el teorema de muestreo.((DNL))
+  ,La fase de los datos es un valor comprendido en el intervalo $[0\, -\pi]$)).
+  ((END))
+profesor: |+
+  ((BEGIN))
+  ((ANSWER))
+  ((END))
+---
+tags:
+  - test
+  - señal
+alumno: |+
+  ((BEGIN))
+  Aplicar un sistema sobre una secuencia equivale a:
+
+  ((TEST4((DNL))
+  ,Multiplicar los espectros del sistema y la señal.((DNL))
+  ,Convolucionar los espectros del sistema y de la señal.((DNL))
+  ,Desplazar en tiempo la señal.((DNL))
+  ,Hacer un desplazamiento en frecuencia del espectro de la señal.))
+  ((END))
+profesor: |+
+  ((BEGIN))
+  ((ANSWER)) Multiplicar los espectros del sistema (Transformada de la respuesta impulsiva) y el espectro de la señal
+  ((END))
+---
+tags:
+  - test
+  - señal
+alumno: |+
+  ((BEGIN))
+  ¿Cuál de las siguientes afirmaciones sobre un sistema LTI es cierta?
+
+  ((TEST4((DNL))
+  ,Los sistemas FIR son estables por definición.((DNL))
+  ,Los sistemas IIR se pueden expresar en forma recursiva y no recursiva.((DNL))
+  ,Un sistema causal es estable.((DNL))
+  ,Los sistemas anticausales se pueden implementar en tiempo real.))
+  ((END))
+profesor: |+
+  ((BEGIN))
+  ((ANSWER))
+  ((END))
+---
+tags:
+  - test
+  - señal
+alumno: |+
+  ((BEGIN))
+  ¿Cuál de las siguientes afirmaciones con respecto a un sistema FIR es falsa?
+
+  ((TEST4((DNL))
+  ,Sólo se puede implementar mediante la ecuación en diferencia.((DNL))
+  ,Es estable por definición.((DNL))
+  ,Se diseñan con fase lineal((DNL))
+  ,Su respuesta impulsiva es finita.))
+  ((END))
+profesor: |+
+  ((BEGIN))
+  TBD
+  ((END))
+---
+tags:
+  - test
+  - señal
+alumno: |+
+  ((BEGIN))
+  ¿Cuál de las siguientes expresiones es correcta para la $DTFT\{x[n-4] * y[n]\}$?
+
+  TBD: En el original solo salen 4 cruces rojas
+  ((END))
+profesor: |+
+  ((BEGIN))
+  TBD
+  ((END))
+---
+tags:
+  - test
+  - señal
+alumno: |+
+  ((BEGIN))
+  De las siguientes afirmaciones sobre el zero padding, ¿cuál es incorrecta?:
+
+  ((TEST4((DNL))
+  ,Consiste en añadir ceros a la secuencia.((DNL))
+  ,Produce una interpolación en el espectro de la señal.((DNL))
+  ,Mejora la exactitud de la medida.((DNL))
+  ,Mejora la resolución espectral de la secuencia.))
+  ((END))
+profesor: |+
+  ((BEGIN))
+
+  TBD
+
+  ((END))
+
+---
+tags:
+  - test
+  - señal
+alumno: |+
+  ((BEGIN))
+  Usar una ventana de Hann para enventanar la respuesta impulsiva de un filtro paso baja ideal da como resultado:
+
+  ((TEST4((DNL))
+  ,Un rizado mayor en las bandas de paso y una banda de transición más ancha.
+  ,Un rizado menor y una banda de transición más estrecha.
+  ,Un rizado menor y una banda de transición más ancha.
+  ,Mejora la estabilidad del filtro.))
+  ((END))
+---
+tags:
+  - test
+  - señal
+alumno: |+
+  ((BEGIN))
+  Según el teorema del muestreo:
+
+  ((TEST4((DNL))
+  ,La frecuencia discreta mínima distinguible es de 0.5 en frecuencia normalizada.
+  ,La frecuencia discreta máxima distinguible es de 0.5 en frecuencia normalizada.
+  ,Las frecuencias normalizadas discreta de 0.1 y 0.9 son distinguibles.
+  ,La fase debe ser como mínimo el doble de la fase de la señal que se muestrea.))
+  ((END))
+---
+tags:
+  - test
+  - señal
+alumno: |+
+  ((BEGIN))
+  ¿Cuál de las siguientes afirmaciones sobre la stFT es falsa?
+
+  ((TEST4((DNL))
+  ,Supone calcular la DFT en un proceso de enventanado.
+  ,La longitud de la ventana debe ser superior a 1 segundo.
+  ,El solapamiento mínimo es de 0\%.
+  ,El desplazamiento debe ser superior o igual a 1 muestra.))
+  ((END))
+

@@ -1,0 +1,55 @@
+---
+tags:
+  - addition
+  - one digit
+difficulty: 1
+description: |+
+  ((HEADER)) ((VAR,a,INT,1,9)) + ((VAR,b,INT,1,9,2)) =
+
+notes: |+
+  ((HEADER_NOTES))
+
+  c = ((a))+((b))
+
+---
+tags:
+  - addition
+  - two digit
+difficulty: 2
+description: |+
+  ((HEADER)) ((DNL))
+  ((DNL))
+  ((SAVE,c,INT,21,99))((DNL))
+  ((VAR,a,INT,10,((CALC,c,10,-,INT)))) + ((VAR,b,CALC,c,a,-,INT)) =
+
+notes: |+
+  ((HEADER_NOTES))
+  % Forced to avoid an answer bigger than 100
+
+  c = ((a))+((b))
+
+---
+tags:
+  - substraction
+  - one digit
+difficulty: 1
+description: |+
+  ((HEADER)) ((VAR,a,INT,1,9)) - ((VAR,b,INT,1,((a)))) =
+
+notes: |+
+  ((HEADER_NOTES))
+
+  c = ((a))-((b))
+---
+tags:
+  - substraction
+  - two digit
+difficulty: 2
+description: |+
+  ((HEADER)) ((DNL))
+  ((VAR,a,INT,11,99)) - ((VAR,b,INT,10,((a))))=
+
+notes: |+
+  ((HEADER_NOTES))
+
+  c = ((a))-((b))

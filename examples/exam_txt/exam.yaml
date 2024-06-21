@@ -1,0 +1,22 @@
+---
+comment: 1st Part. 2023
+difficulty: 3
+tolerance: 1
+bank: bank
+files:
+  - description.txt
+  - notes.txt
+macros:
+  ((MAIN_HEADER)): |+
+    Exam of maths. 2024-06-26. Blah Blah Blah
+  ((HEADER)): ((COUNTER))) 
+  ((HEADER_NOTES)): |+
+
+    %%
+    % Question ((COUNTER))
+parts:
+  - main_header
+  - addition: "0-2"
+  - substraction: "1-*" 
+
+

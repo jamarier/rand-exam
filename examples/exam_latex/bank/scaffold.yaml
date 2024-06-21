@@ -1,0 +1,120 @@
+---
+title: Header
+scaffold: 
+tags: header
+alumno: |+
+  \documentclass[((FORMATO)), 12pt]{scrartcl}
+  \usepackage[utf8]{inputenc}
+  \usepackage[spanish]{babel}
+  \usepackage[spanish=nohyphenation]{hyphsubst}
+  \usepackage[automark,headsepline]{scrlayer-scrpage}
+  \usepackage[pdftex]{graphicx}
+  \usepackage{enumerate}
+  \usepackage{amsmath}
+  \usepackage{amssymb}
+  \usepackage{hyperref}
+  \usepackage{array}
+  \usepackage{xcolor}
+  \usepackage{todonotes}
+  
+  
+  %% Glosario de comandos de octave
+  %\usepackage[intoc]{nomencl}
+  %\makenomenclature
+  %\renewcommand{\nomlabelwidth}{3cm}
+  %\renewcommand{\nomname}{Glosario de comandos útiles de octave}
+  \newcommand{\nomenclature}[2]{} % evitar el error del paquete
+                                  % nomenclature
+  \newcommand{\printnomenclature}{} % evitar el error del paquete
+                                  % nomenclature
+  
+  
+  % selección de resultado (profesor - alumno)
+  \usepackage{etoolbox}
+  
+  % %Paquete comment (permite mostrar o excluir la información).
+  \usepackage{comment}
+  
+  
+  
+  %\definecolor{paragraphcolor}{rgb}{0.8,0.8,0.8}
+  \definecolor{paragraphcolor}{gray}{0.8}
+  
+  \newcounter{problema}
+  \setcounter{problema}{0}
+  \setcounter{section}{0}
+  
+  \newtoggle{profesor}
+  ((VERSION))
+  
+  \iftoggle{profesor}{ % versión del profesor
+    \newenvironment{solucion}{ 
+      \bigskip
+      \hrule width 50mm height 2pt
+      \bigskip
+      \color{black!60!blue}}
+    { \color{black}
+      \newpage}
+    \newcommand{\fuente}[1]{\marginpar{[#1]}}
+    \newcommand{\manual}{\marginpar{Manual}}
+    \newcommand{\octave}{\marginpar{Octave}}
+  }{ %versión del alumno 
+    \excludecomment{solucion}
+    \newcommand{\fuente}[1]{}
+    \newcommand{\manual}{}
+    \newcommand{\octave}{}
+  }
+  
+  
+  \newenvironment{enunciado}
+  {%BEGIN
+  \noindent
+  \addtocounter{problema}{1}
+  \textbf{\thesection.\theproblema}
+  \addtocounter{problema}{-1}
+  %\stepcounter{problema}
+   \refstepcounter{problema}
+   \normalfont
+  }{
+  %END
+  \bigskip
+  \bigskip
+  }
+  
+  \usepackage{siunitx}
+  
+  % paquete para la inclusión de código en octave
+  \usepackage{listings}
+  
+  \lstset{%
+    language=Octave,
+    backgroundcolor=\color{lightgray!50},
+    texcl=true
+  }
+  
+  % Definiendo la cabecera
+  \clearpairofpagestyles
+  \cfoot[\pagemark]{\pagemark}
+  \iftoggle{profesor}{ % versión del profesor
+    \lehead{\small ((TITULO))}
+    \lohead{\headmark}
+    \rohead{\small ((TITULO))}
+    \rehead{\headmark}
+  }{ %versión del alumno
+    \lehead{\small ((TITULO))}
+    \rohead{\small ((TITULO))}
+  }
+  
+  
+  \pagestyle{scrheadings}
+  
+  \begin{document}
+
+profesor: ((alumno_raw))
+---
+title: Tail
+scaffold: 
+tags: tail
+alumno: |+
+  \end{document}
+profesor: ((alumno_raw))

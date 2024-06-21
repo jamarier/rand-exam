@@ -193,10 +193,10 @@ def op_FLOAT(args, vars_storage: Mapping) -> Tuple[str, Mapping]:
     return str(gen_float(*args)), vars_storage
 
 
-@register_op("FLOATgen_range")
-def op_FLOATgen_range(args, vars_storage: Mapping) -> Tuple[str, Mapping]:
+@register_op("FLOATRANGE")
+def op_FLOATRANGE(args, vars_storage: Mapping) -> Tuple[str, Mapping]:
     """
-    FLOATgen_range(min,max,step,decimals?)
+    FLOATRANGE(min,max,step,decimals?)
     """
     args = to_float(args)
 

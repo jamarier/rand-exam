@@ -1,0 +1,55 @@
+---
+comment: Catalogue 
+bank: bank
+difficulty: 0
+tolerance: 100000
+files:
+  - alumno.tex
+  - profesor.tex
+macros:
+  ((TITULO)): "Boletin Procesado Señales 2024-2025"
+  ((FORMATO)): ((FORMATO_PANTALLA))
+  ((FORMATO_PAPEL)): a4paper
+  ((FORMATO_PANTALLA)): a5paper
+
+  ((VERSION)): ((VERSION_((FILE))))
+  ((VERSION_alumno)): "%\\toggletrue{profesor}"
+  ((VERSION_profesor)): "\\toggletrue{profesor}"
+
+  ((HEADER_NOTES)): |
+     ##### ((COUNTER)). $((FOR,\Delta,((difficulty))))$
+  ((HEADER)): |
+     ##### ((COUNTER)). $((FOR,\Delta,((difficulty))))$
+  ((EXTERNAL_DIR)): "bank/external"
+
+  ((BEGIN)): ((BEGIN_((FILE))))
+  ((END)): ((END_((FILE))))
+  ((BEGIN_alumno)): "\\begin{enunciado}"
+  ((END_alumno)): "\\end{enunciado}\n"
+
+  ((BEGIN_profesor)): |+
+    ((TAGS))
+    ((alumno))
+    \begin{solucion}
+  ((END_profesor)): "\\end{solucion}\n"
+
+  ((TAGS)): ((TAGS_((FILE))))
+  ((TAGS_alumno)): ""
+  ((TAGS_profesor)): "\\fuente{((tags))}"
+
+  ((TEST4,@a,@b,@c,@d)): |+
+    ((SAVE,ANSWER,QUOTECOMMA,@a))
+    ((SAVE,A,OP,((QUOTECOMMA,@a)),((QUOTECOMMA,@b)),((QUOTECOMMA,@c)),((QUOTECOMMA,@d))))((DNL))
+    ((SAVE,B,OPEXCEPT,1,((QUOTECOMMA,((A)))),((QUOTECOMMA,@a)),((QUOTECOMMA,@b)),((QUOTECOMMA,@c)),((QUOTECOMMA,@d))))((DNL))
+    ((SAVE,C,OPEXCEPT,2,((QUOTECOMMA,((A)))),((QUOTECOMMA,((B)))),((QUOTECOMMA,@a)),((QUOTECOMMA,@b)),((QUOTECOMMA,@c)),((QUOTECOMMA,@d))))((DNL))
+    ((SAVE,D,OPEXCEPT,3,((QUOTECOMMA,((A)))),((QUOTECOMMA,((B)))),((QUOTECOMMA,((C)))),((QUOTECOMMA,@a)),((QUOTECOMMA,@b)),((QUOTECOMMA,@c)),((QUOTECOMMA,@d))))((DNL))
+    \\begin{itemize}
+    \\item ((A))
+    \\item ((B))
+    \\item ((C))
+    \\item ((D))
+    \\end{itemize}
+parts:
+  - header 
+  - all: -1
+  - tail
