@@ -15,7 +15,7 @@ alumno: |+
   \usepackage{hyperref}
   \usepackage{array}
   \usepackage{xcolor}
-  \usepackage{todonotes}
+  %\usepackage{todonotes}
   
   
   %% Glosario de comandos de octave
