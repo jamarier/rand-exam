@@ -110,6 +110,7 @@ alumno: |+
   
   \begin{document}
 
+
 profesor: ((alumno_raw))
 ---
 title: Tail
@@ -117,4 +118,52 @@ scaffold:
 tags: tail
 alumno: |+
   \end{document}
+profesor: ((alumno_raw))
+---
+tags: identificacion
+scaffold:
+alumno: |+
+  \newcommand{\fillblank}[1]{%
+      \underline{\hspace{#1}}%
+  }
+
+  \noindent
+  \begin{tabular}{@{}l@{ }l@{}}
+    Apellidos, Nombre: & \fillblank{12cm} \\\\
+  \end{tabular}
+
+  \noindent
+  \hfill
+  \begin{tabular}{|m{3cm}|m{3cm}|m{3cm}|}
+    \hline
+    Test & 
+    Problemas &
+    Final \\\\
+    ~&~&~\\\\[1cm]
+    \hline
+  \end{tabular}
+profesor: "" 
+---
+title: SeccionTest
+tags: sectionTest
+scaffold:
+alumno: |+
+  \section{Test}
+  Las preguntas erróneas tienen una penalización de 1/3 de su valor.
+
+  \vspace{1cm}
+
+profesor: ((alumno_raw))
+---
+title: SeccionProblemas
+tags: sectionProblemas
+scaffold:
+alumno: |+
+  \section{Problemas}
+  \setcounter{problema}{0}
+
+  Escoja uno, y solo uno, de los problemas propuestos.
+  
+  \vspace{1cm}
+
 profesor: ((alumno_raw))

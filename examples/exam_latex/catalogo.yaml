@@ -7,7 +7,7 @@ files:
   - alumno.tex
   - profesor.tex
 macros:
-  ((TITULO)): "Boletin Procesado Señales 2024-2025"
+  ((TITULO)): "Procesado Digital de Señales. Examen 1ra Convocatoria 2024-06-26"
   ((FORMATO)): ((FORMATO_PAPEL))
   ((FORMATO_PAPEL)): a4paper
   ((FORMATO_PANTALLA)): a5paper
@@ -44,12 +44,16 @@ macros:
     ((SAVE,C,OPEXCEPT,2,((QUOTECOMMA,((A)))),((QUOTECOMMA,((B)))),((QUOTECOMMA,@a)),((QUOTECOMMA,@b)),((QUOTECOMMA,@c)),((QUOTECOMMA,@d))))((DNL))
     ((SAVE,D,OPEXCEPT,3,((QUOTECOMMA,((A)))),((QUOTECOMMA,((B)))),((QUOTECOMMA,((C)))),((QUOTECOMMA,@a)),((QUOTECOMMA,@b)),((QUOTECOMMA,@c)),((QUOTECOMMA,@d))))((DNL))
     \\begin{itemize}
-    \\item ((A))
-    \\item ((B))
-    \\item ((C))
-    \\item ((D))
+    \\item[$\Box$] ((A))
+    \\item[$\Box$] ((B))
+    \\item[$\Box$] ((C))
+    \\item[$\Box$] ((D))
     \\end{itemize}
 parts:
   - header 
-  - all: -1
+  - identificacion
+  - sectionTest
+  - test: 5
+  - sectionProblemas
+  - problems: -1
   - tail

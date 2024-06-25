@@ -1,0 +1,42 @@
+---
+tags:
+  - problema
+  - AmpOp
+alumno: |+
+  ((BEGIN))
+  Calcule la ganancia en tensión del circuito de la figura:
+  
+  \hfil
+  \includegraphics[width=0.5\linewidth]{((EXTERNAL_DIR))/esquema_inversor-1133559524.jpg}
+  \hfil
+
+  ((END))
+profesor: |+
+  ((BEGIN))
+  $$A_v= -\frac{R_1}{R_2}$$
+  ((END))
+---
+tags:
+  - problema
+  - AmpOp
+alumno: |+
+  ((BEGIN))
+  Si en el circuito de la figura, 
+    $R_1=\qty{((VAR,a,OP,10,12,21,47))}{\kilo\ohm}$ 
+  y 
+    $R_2=\qty{((VAR,b,OP,1,1.2,2.1))}{\kilo\ohm}$.
+
+  Calcule la tensión de salida si la entrada es igual a 
+  $V_{in}=\qty{((VAR,vin,FLOATRANGE,1,5,2))}{\volt}$
+  
+  \hfil
+  \includegraphics[width=0.5\linewidth]{((EXTERNAL_DIR))/esquema_inversor-1133559524.jpg}
+  \hfil
+
+  ((END))
+profesor: |+
+  ((BEGIN))
+  $$A_v= -\frac{R_1}{R_2} = -\frac{((a))}{((b))} = ((VAR,ganancia,CALC,-1,a,*,b,/,2,ROUND))$$
+
+  $$V_{out} = V_{in} A_v = \qty{((vin))}{\volt} (((ganancia))) = \qty{((CALC,vin,ganancia,*))}{\volt}$$
+  ((END))

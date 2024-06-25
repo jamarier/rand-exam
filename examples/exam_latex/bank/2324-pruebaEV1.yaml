@@ -96,20 +96,6 @@ tags:
   - señal
 alumno: |+
   ((BEGIN))
-  ¿Cuál de las siguientes expresiones es correcta para la $DTFT\{x[n-4] * y[n]\}$?
-
-  TBD: En el original solo salen 4 cruces rojas
-  ((END))
-profesor: |+
-  ((BEGIN))
-  TBD
-  ((END))
----
-tags:
-  - test
-  - señal
-alumno: |+
-  ((BEGIN))
   De las siguientes afirmaciones sobre el zero padding, ¿cuál es incorrecta?:
 
   ((TEST4((DNL))
