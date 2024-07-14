@@ -1,31 +1,41 @@
-# Examen generator
+# Exam generator
 
-From a bank of questions, it generates two text files one with questions ("exam
-description") and the other with answers ("exam answers"). 
+Exam generator chooses from a bank of questions/problems a set of items based
+on a set of constraints. 
 
-The exam is generated in any text format: markdown, LaTeX, python, octave,
-whatever.
+Possible constraints are the global difficult of the selected set and the
+amount of questions in each section (it can be an exact number of questions or a
+range).
 
-The answers are generated in any text format. In my case, the alumns write an
-octave script and the answers section of the questions are code to verify the
-values of the answer of the alumn. But, you can put the literal answers. 
+Additionally, a macro engine allows defining global parameters (e.g. header
+texts, header of each question, date, ...) and increase the variety of questions
+using random parameters in exercises.
 
-Each question has a difficulty metadata and a frequency metadata. 
+The bank of questions is composed as a series of YAML files with the questions and
+metadata as subject, difficulty, likelihood to be used, and random value generation.
 
-The exam is build to fullfill a total difficulty requirement. And each question
-has a probability to appear in function of the frequency metadata.
+The general configuration of the set to be generated is in the index\_file,
+which has information about desired difficulty, general macros and structure of
+questions. The use of convenient index\_files allow generating different
+exams but also the ability of create a catalog of all problems in database.
 
-A simple, but powerfull, macro system is defined. You can generate random
-values in several ways, use later, define common headers, and functions (all
-using string substitution)
+There are no restrictions about the format of the questions, except they are
+any text format (text, Markdown, LaTeX, typst, python, octave, whatever) and
+all questions have to share the same formats. Also, each question can use any
+amount of "versions": a question can have an English version, a Spanish one, a
+Solution, notes about the problem, sources, implementation in several
+programing languages etc. 
+
+**The rest of the README.md file is from an older version. So, the information 
+maybe is not very updated. Work in progress**
 
 ## Options
 
-Usage: gen-exlab.py [OPTIONS] INDEX\_FILE BANK\_DIR
+Usage: rand-exam.py [OPTIONS] INDEX\_FILE BANK\_DIR
 
 Arguments:
 
-*  INDEX\_FILE  Structure of exam  [required]
+*  INDEX\_FILE Structure of exam [required]
 
 Options:
 
@@ -33,26 +43,26 @@ Options:
 
     This parameter can be defined also in INDEX\_FILE
 
-* -e, --edition INTEGER  Force edition. If None, look for first empty
+* -e, --edition INTEGER Force edition. If None, look for first empty
 
     It is possible to generate different versions of the exam (with same
-    INDEX\_FILE (different questions but same difficulty and categories)
+    INDEX\_FILE). That is, different questions but same difficulty and categories.
 
-* -s, --seed INTEGER     Seed used
+* -s, --seed INTEGER Seed used
 
     To force the rebuild an exam with same questions and values. BE CAREFUL, 
     the same random generator is used to select questions and random values, if
     the BANK\_DIR is altered (i.e. adding a random var in a question). 
-    Can alter the questions (CHECK)
+    Can alter the questions (TODO: CHECK)
 
     This parameter can be defined also in INDEX\_FILE
 
-    The real seed is this seed parameter added with edition. It is a good strategy
+    The real seed used is this seed parameter added with edition. It is a good strategy
     use the date (numeric) of the exam as seed multiplied by 10 or 100. So 
     edition 1 of date 20231011 will use a different seed (202310111) than edition 0 of 
     date 20231012 (202310120). 
 
-* -a, --tries INTEGER    Number of tries to generate exam  [default: 1000]
+* -a, --tries INTEGER Number of tries to generate exam [default: 1000]
 
     The exam is generate trying random posibilities. This parameter says how
     many tries do.
