@@ -66,11 +66,13 @@ class Counter:
 
         Possible values:
         - structure (input)
-            - -2 -> (*,*) Any negative
-            - 0  -> (1,1) Any positive or zero
+            - -2 -> (*,*) Any negative becomes in maximum posible. 
+                          Obs: Any number of questions is (0,*), 
+                               all questions is (*,*)
+            - 1  -> (1,1) Any positive or zero
         - min:
             - zero or positive int (numeric minimun)
-            - '*' -> max value possible
+            - '*' -> max value possible 
         - max:
             - zero or positive value (bigger than min)
             - * -> max value possible
@@ -98,7 +100,7 @@ class Counter:
             - otherwhise -> ("unknown","unknown")
         - min:
             - zero or positive int (numeric minimun)
-            - "unknown" -> unknown value (1)
+            - "unknown" -> unknown value(1)
         - max:
             - zero or positive value (bigger than min)
             - "unknown" -> unknown value(1)

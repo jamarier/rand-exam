@@ -100,9 +100,13 @@ def inner_load_questions(input_path: Path, accumulated: List) -> List:
         for subinput in input_path.glob("*"):
             accumulated = inner_load_questions(subinput, accumulated)
     elif input_path.suffix in (".yaml", ".yml"):
+        file_id = input_path.stem
+        question_id=0
         with input_path.open("r") as fh:
             questions = yaml.safe_load_all(fh)
             for question in questions:
+                id = f"{file_id}_{question_id}"
+                question_id+=1
                 # allow to ignore unfinished questions
                 if "ignored" in question:
                     print(" question ignored.")
@@ -126,6 +130,7 @@ def inner_load_questions(input_path: Path, accumulated: List) -> List:
                     question["scaffold"] = False
 
                 # default values
+                question["id"] = id
                 question["difficulty"] = question.get("difficulty", 1)
                 question["frequency"] = question.get("frequency", 1)
                 question["autotag"] = question.get("autotag", True)
@@ -160,7 +165,7 @@ def estimated_difficulty_tag(questions) -> float:
     sum_numerator = 0
     sum_frequency = 0
 
-    label("quesions")
+    label("questions")
     print(questions)
 
     for question in questions:
@@ -175,46 +180,63 @@ def estimated_difficulty_tag(questions) -> float:
     return sum_numerator / sum_frequency
 
 
-def random_question(questions, num_questions) -> List:
+def random_question(questions, num_questions,used) -> List:
     """
-    questions: bank of questions (for certain part)
+    From list of questions (with correct tags selection) num_questions are selected. (used questions are ignored)
+
+    questions: bank of questions. It's a list of questions with correct tags (for certain part).
     num_questions: number of questions to extract
+    used: set of used questions along the exam
     """
 
-    # in case all questions asked
-    if len(questions) == num_questions:
-        return questions
+    # filter out "used" questions in "questions"
+    questions = [ it for it in questions if it["id"] not in used]
 
-    return random_question_more(questions, num_questions)
+    # in case available questions are less than num_questions 
+    if len(questions) <= num_questions:
+        output = []
+
+        for question in questions:
+            output.append(question)
+            if not question["scaffold"]:
+                used.add(question["id"])
+
+        return output,used
+
+    return random_question_more(questions, num_questions,used)
 
 
-def random_question_more(questions, num_questions) -> List:
+def random_question_more(questions, num_questions,used) -> List:
     """
-    Select num_questions questions from the list of questions
-    """
+    In case length(questions)>num_questions and there are selection:
 
-    if num_questions == 1:
-        return random_question_one(questions)
-    if num_questions == 0:
-        return []
+    Select num_questions questions from the list of questions.
+    All questions are not in "used" (they where filtered in random_question).
+    "used" is only to add selected questions
+    """
 
     output = []
+    output_used = used
 
-    one_question = random_question_one(questions)[0]
-    output.append(one_question)
+    while num_questions > 0:
+        question = random_question_one(questions)
 
-    new_possible_questions = [it for it in questions if it is not one_question]
+        output.append(question)
+        output_used.add(question["id"])
 
-    output.extend(random_question_more(new_possible_questions, num_questions - 1))
+        questions = [it for it in questions if it["id"] not in output_used]
+        num_questions-=1
 
-    return output
+    return output,output_used
+
 
 
 def random_question_one(questions) -> List:
     """
-    Extract `num_questions` random question(s) from bank with
-    certain tag
+    Extract one random question from bank 
     """
+
+    assert len(questions)>0, "In random_question_one with empty bank of questions"
 
     accum = 0.0
     for question in questions:
@@ -226,9 +248,10 @@ def random_question_one(questions) -> List:
     for question in questions:
         accum += question["frequency"]
         if cursor < accum:
-            return [question]
+            return question
 
-    return questions[-1]  # las element
+    question = questions[-1]
+    return question
 
 
 # --------------------------------------------------------------------
@@ -400,34 +423,40 @@ def random_exam_item(exam):
     parts = copy.deepcopy(exam["parts"])
 
     num_of_questions = random.randint(parts.min, parts.max)
+    used_questions = set()
     parts.update_taken_questions(num_of_questions)
     print(label("after count finished"))
     print(parts)
 
-    possible_exam = random_exam_item_recurse(parts)
+    possible_exam,_ = random_exam_item_recurse(parts,used_questions)
 
     difficulty = difficulty_list(possible_exam)
 
     return (difficulty, possible_exam)
 
 
-def random_exam_item_recurse(part):
+def random_exam_item_recurse(part,used_questions):
     """
     runs recursively part to extracts all the questions
     """
     output = []
+    output_used = used_questions 
 
     if part.children:
         for child in part.children:
-            output.extend(random_exam_item_recurse(child))
+            child_possible_exam, output_used = random_exam_item_recurse(child,output_used)
+            output.extend(child_possible_exam)
     else:  # part.bank
-        output.extend(random_question(part.bank, part.taken))
+        possible_exam, output_used = random_question(part.bank,part.taken,output_used)
+        output.extend(possible_exam)
 
-    return output
+    return output, output_used
 
 
 def random_exam(exam):
     """
+    Try random possible exams (calling random_exam_item)
+
     Look for a exam, from questions, with difficulty (from exam)
     and with a limit of tries and tolerance.
 
