@@ -52,7 +52,7 @@ def check_field(field, question) -> Dict:
     """
 
     if field not in question or question[field] is None:
-        question[field] = f"\n((COUNTER)): No {field} - DEBUG\n\n"
+        question[field] = f"\n((COUNTER)): No {field} - DEBUG. Metadata: {question}\n\n"
 
     return question
 

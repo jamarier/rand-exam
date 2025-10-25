@@ -424,7 +424,11 @@ def load_next_macro(text: str) -> Tuple:
         else:
             nargs.append(arg)
 
-        escaped_comma = arg[-1] == "\\"
+        if len(arg) > 0:
+            escaped_comma = arg[-1] == "\\"
+        else:
+            escaped_comma = False
+
     args = nargs
 
     key = args.pop(0)
