@@ -1,4 +1,4 @@
-#!/usr/bin/env env/bin/python
+#!/usr/bin/env .venv/bin/python
 
 import time
 from typing import Dict, List, Optional
@@ -144,7 +144,7 @@ def load_questions(bank_dir: Path) -> List:
     """
     header("Loading questions")
     questions = inner_load_questions(bank_dir, [])
-    assert len(questions)>0, "No questions in bank"
+    assert len(questions) > 0, "No questions in bank"
 
     return questions
 
@@ -205,8 +205,7 @@ def random_question_more(questions, num_questions) -> List:
 
     new_possible_questions = [it for it in questions if it is not one_question]
 
-    output.extend(random_question_more(
-        new_possible_questions, num_questions - 1))
+    output.extend(random_question_more(new_possible_questions, num_questions - 1))
 
     return output
 
@@ -386,10 +385,8 @@ def estimated_difficulty_exam(exam, selected_questions) -> float:
     print(selected_questions)
 
     for part, questions in zip(exam["parts"], selected_questions):
-        difficulty[0] += estimated_difficulty_tag(
-            questions) * part["num_questions"][0]
-        difficulty[1] += estimated_difficulty_tag(
-            questions) * part["num_questions"][1]
+        difficulty[0] += estimated_difficulty_tag(questions) * part["num_questions"][0]
+        difficulty[1] += estimated_difficulty_tag(questions) * part["num_questions"][1]
 
     return difficulty
 
@@ -509,8 +506,7 @@ def gen_filenames(index_file, exam, counter):
             )
         else:
             filenames.append(
-                base_filename.parent /
-                (base_filename.stem + f"_{name}" + suffix)
+                base_filename.parent / (base_filename.stem + f"_{name}" + suffix)
             )
 
     return filenames
@@ -586,8 +582,7 @@ def render_exam(exam, exam_instance):
             inputs.append(question[fid])
 
         outputs = macro_engine2(
-            counter, exam["macros"], {
-                "metadata": question}, exam["files_id"], inputs
+            counter, exam["macros"], {"metadata": question}, exam["files_id"], inputs
         )
         for index, content in zip(exam["files_id"], outputs):
             output_texts[index] += content
@@ -666,8 +661,7 @@ def main(
         ),
     ],
     bank_dir: Annotated[
-        Optional[Path], typer.Option(
-            "--bank", "-b", help="Questions to choose from")
+        Optional[Path], typer.Option("--bank", "-b", help="Questions to choose from")
     ] = None,
     edition: Annotated[
         Optional[int],
@@ -679,12 +673,10 @@ def main(
         Optional[int], typer.Option("--seed", "-s", help="Seed used")
     ] = None,
     tries: Annotated[
-        int, typer.Option(
-            "--tries", "-a", help="Number of tries to generate exam")
+        int, typer.Option("--tries", "-a", help="Number of tries to generate exam")
     ] = None,
     tolerance: Annotated[
-        float, typer.Option("--tolerance", "-t",
-                            help="Tolerance to select exam")
+        float, typer.Option("--tolerance", "-t", help="Tolerance to select exam")
     ] = None,
 ):
     print("index_file", index_file)
