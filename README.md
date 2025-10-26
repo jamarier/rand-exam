@@ -225,7 +225,7 @@ Second version of the macro engine. In the same namespace, there are four kind o
 substitutions.
 
 * Metadata. Specific information of the question: Level of difficulty,
-  frequency, title, ...Metadata is accesible in descriptions and notes of the
+  frequency, title, ... Metadata is accesible in descriptions and notes of the
   question.
 
 * Vars. Specific from question. Any variable defined with "SAVE" or "VAR"
@@ -428,8 +428,9 @@ regex: <auto or bool>
 autotag: <bool (default True)>
 ```
 
-* **title** A title only for document the question. Maybe an example of
-  question or a small description. Optional
+* **title** A title only for document the question. It is useful to use an
+  unique ID in this field. DEBUG message use title to identify the question. 
+  Optional
 * **scaffold** This is not a real question. Its a piece of text to add to 
   an exam. Like title of exam, name of section, header. Useful, for instance to 
   create he header and end of LaTeX document. The tags of this no-question have to be 

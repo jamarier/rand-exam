@@ -113,7 +113,7 @@ def gen_int(min, max) -> str:
 
 
 def gen_range(min, max, step) -> List:
-    """min <= generated << max
+    """min <= generated <= max
     step"""
     options = []
     current = min

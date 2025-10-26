@@ -49,11 +49,14 @@ def label(text):
 def check_field(field, question) -> Dict:
     """
     If the field doesn't exist it is marked in debug mesage
+
+    TODO: copy description text without posterior conversion
     """
 
     if field not in question or question[field] is None:
-        question[field] = f"\n((COUNTER)): No {field} - DEBUG. Metadata: {question}\n\n"
-
+        metadata = { key: value for key,value in question.items() if key in ["id","title","difficulty","tags","frequency","scaffold","regex"]}
+        question[field] = f"\n**MISSING ((COUNTER))**: No {field} - DEBUG. Metadata: {metadata}\n\n"
+ 
     return question
 
 
